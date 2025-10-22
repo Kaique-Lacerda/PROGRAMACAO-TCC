@@ -324,35 +324,13 @@ function Jogo() {
 
           <View style={styles.box}>
             <TouchableOpacity activeOpacity={0.85} onPress={handleBatataClimaPress} style={styles.batataWrapper}>
-              <ImageBackground
-                source={require('../assets/images/batata-doce.png')}
-                style={styles.batataButton}
-                imageStyle={{ borderRadius: 16 }}
-              >
+              <View style={[styles.batataButton, { backgroundColor: 'rgba(0,0,0,0.18)', borderRadius: 16 }]}>
                 <View style={styles.climaRelogioArea}>
                   <Text style={styles.climaText}>{clima.temperatura} {clima.icone}</Text>
                   <Text style={styles.relogio}>{hora}</Text>
                 </View>
-              </ImageBackground>
+              </View>
             </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* LINHA 2: espaço reservado — cronômetro foi movido para /cronometro */}
-        <View style={[styles.row, { justifyContent: 'center', alignItems: 'center' }]}>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <View style={{ width: '90%' }}>
-              <ImageBackground
-                source={require('../assets/images/batata-doce.png')}
-                style={[styles.batataButton, { paddingVertical: 28, alignItems: 'center' }]}
-                imageStyle={{ borderRadius: 18 }}
-              >
-                <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: '#fff', opacity: 0.6 }}>Cronômetro na tela separada</Text>
-                  <Text style={{ color: '#ffb300', marginTop: 8 }}>Use a área do personagem para abrir</Text>
-                </View>
-              </ImageBackground>
-            </View>
           </View>
         </View>
 
@@ -361,11 +339,7 @@ function Jogo() {
           <View style={styles.box}><Text style={styles.boxText}></Text></View>
 
           <View style={styles.box}>
-            <ImageBackground
-              source={require('../assets/images/batata-doce.png')}
-              style={[styles.musicPlayerBg, { padding: 12 }]}
-              imageStyle={{ borderRadius: 16 }}
-            >
+            <View style={[styles.musicPlayerBg, { padding: 12, borderRadius: 16 }]}>
               {audiusLoading ? (
                 <Text style={styles.musicNow}>Carregando músicas...</Text>
               ) : audiusTracks.length === 0 ? (
@@ -436,7 +410,7 @@ function Jogo() {
                   </View>
                 </View>
               )}
-            </ImageBackground>
+            </View>
           </View>
         </View>
 
