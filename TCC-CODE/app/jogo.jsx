@@ -15,11 +15,11 @@ function Jogo() {
   };
 
   function formatarTempo(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-  const min = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-  const sec = String(totalSeconds % 60).padStart(2, '0');
-  return { hours, min, sec };
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const min = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const sec = String(totalSeconds % 60).padStart(2, '0');
+    return { hours, min, sec };
   }
 
   // TODOS os hooks SEMPRE no topo
@@ -35,59 +35,17 @@ function Jogo() {
   const [tocando, setTocando] = useState(false);
   const [loading, setLoading] = useState(false);
   const [clima, setClima] = useState({ temperatura: '--', icone: '--' });
-    // Estados para músicas locais e player
-    const [localTracks, setLocalTracks] = useState([]);
-    const [currentLocalTrack, setCurrentLocalTrack] = useState(null);
-    const [showLocalList, setShowLocalList] = useState(false);
-  // Estados para cronômetro
-  const [cronometro, setCronometro] = useState(0);
-  const intervalRef = useRef(null);
+  const [localTracks, setLocalTracks] = useState([]);
+  const [currentLocalTrack, setCurrentLocalTrack] = useState(null);
+  const [showLocalList, setShowLocalList] = useState(false);
 
-  // Iniciar cronômetro
-  const iniciarCronometro = () => {
-    if (intervalRef.current) return;
-    intervalRef.current = setInterval(() => {
-      setCronometro(prev => prev + 1000);
-    }, 1000);
+  // Mostrar detalhe do clima ao tocar na batata
+  const [showClimaDetail, setShowClimaDetail] = useState(false);
+
+  // Ao tocar na batata do clima, abre/fecha detalhe
+  const handleBatataClimaPress = () => {
+    setShowClimaDetail(v => !v);
   };
-
-  // Pausar cronômetro
-  const pausarCronometro = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
-
-  // Zerar cronômetro
-  const zerarCronometro = () => {
-    setCronometro(0);
-    pausarCronometro();
-  };
-
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
-
-  const fetchAudiusTracks = useCallback(async () => {
-    setAudiusLoading(true);
-    try {
-      const res = await fetch('https://discoveryprovider.audius.co/v1/tracks/search?query=lofi&app_name=PROGRAMACAO-TCC&limit=20&with_users=true');
-      const json = await res.json();
-      // Filtra faixas que têm stream_url ou permalink válido
-      const tracks = (json.data || []).filter(track => track.stream_url || track.permalink);
-      setAudiusTracks(tracks);
-    } catch (e) {
-      setAudiusTracks([]);
-    }
-    setAudiusLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchAudiusTracks();
-  }, [fetchAudiusTracks]);
 
   useEffect(() => {
     (async () => {
@@ -168,8 +126,22 @@ function Jogo() {
     getLocationAndFetchClima();
   }, []);
 
-  // Só depois de TODOS os hooks, faça returns condicionais:
-  // Removeu checagem de token e devMode. O jogo sempre renderiza normalmente.
+  const fetchAudiusTracks = useCallback(async () => {
+    setAudiusLoading(true);
+    try {
+      const res = await fetch('https://discoveryprovider.audius.co/v1/tracks/search?query=lofi&app_name=PROGRAMACAO-TCC&limit=20&with_users=true');
+      const json = await res.json();
+      const tracks = (json.data || []).filter(track => track.stream_url || track.permalink);
+      setAudiusTracks(tracks);
+    } catch (e) {
+      setAudiusTracks([]);
+    }
+    setAudiusLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchAudiusTracks();
+  }, [fetchAudiusTracks]);
 
   // Salvar música local no backend
   const handleSaveLocalTrack = async (track) => {
@@ -213,12 +185,6 @@ function Jogo() {
       console.log('Erro ao selecionar música:', e);
     }
   };
-
-  // Audius API
-  // ...continuação da função Jogo...
-        // ...continuação da função Jogo...
-
-  // (Removidas duplicações de estados e funções)
 
   // Tocar música local e atualizar nome
   const playLocalTrack = async (track) => {
@@ -305,56 +271,22 @@ function Jogo() {
   };
 
   const handleNext = async () => {
-  if (audiusTracks.length === 0) return;
-  let nextIdx = (trackIdx + 1) % audiusTracks.length;
-  setTrackIdx(nextIdx);
-  const track = audiusTracks[nextIdx];
-  const streamUrl = track.stream_url || (track.permalink ? track.permalink + '/stream' : null);
-  await playAudiusTrack(streamUrl);
+    if (audiusTracks.length === 0) return;
+    let nextIdx = (trackIdx + 1) % audiusTracks.length;
+    setTrackIdx(nextIdx);
+    const track = audiusTracks[nextIdx];
+    const streamUrl = track.stream_url || (track.permalink ? track.permalink + '/stream' : null);
+    await playAudiusTrack(streamUrl);
   };
 
   const handlePrev = async () => {
-  if (audiusTracks.length === 0) return;
+    if (audiusTracks.length === 0) return;
     let prevIdx = (trackIdx - 1 + audiusTracks.length) % audiusTracks.length;
     setTrackIdx(prevIdx);
     const track = audiusTracks[prevIdx];
     const streamUrl = track.stream_url || (track.permalink ? track.permalink + '/stream' : null);
     await playAudiusTrack(streamUrl);
   };
-  useEffect(() => {
-    async function getLocationAndFetchClima() {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Permissão de localização negada!');
-        return;
-      }
-      let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-      const { latitude, longitude } = location.coords;
-      const apiKey = 'f69ab47389319d7de688f72898bde932';
-      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric&lang=pt_br`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.main && data.weather) {
-        let status = data.weather[0].main;
-        let icone = '';
-        if (status === 'Clear') icone = '☀️ Sol';
-        else if (status === 'Rain' || status === 'Drizzle') icone = '🌧️ Chuva';
-        else if (status === 'Clouds') icone = '☁️ Nublado';
-        else icone = `${status}`;
-        setClima({
-          temperatura: `${Math.round(data.main.temp)}°C`,
-          icone: icone
-        });
-      } else {
-        setClima({
-          temperatura: '--',
-          icone: '--'
-        });
-        alert('Não foi possível obter o clima. Verifique a chave da API ou tente novamente.');
-      }
-    }
-    getLocationAndFetchClima();
-  }, []);
 
   return (
     <ImageBackground source={require('../assets/images/background2.gif')} style={styles.container} resizeMode="cover">
@@ -375,50 +307,65 @@ function Jogo() {
       >
         <Text style={{ color: '#ffb300', fontWeight: 'bold', fontSize: 16 }}>Login</Text>
       </TouchableOpacity>
+
       {/* Menu hamburger opaco */}
       <TouchableOpacity style={styles.hamburger} activeOpacity={0.5}>
         <View style={styles.burgerLine} />
         <View style={styles.burgerLine} />
         <View style={styles.burgerLine} />
       </TouchableOpacity>
+
       <View style={styles.grid}>
+        {/* LINHA 1: Relógio + clima */}
         <View style={styles.row}>
-          <View style={styles.box}><Text style={styles.boxText}></Text></View>
           <View style={styles.box}>
             <Text style={styles.boxText}></Text>
-            <View style={styles.relogioArea}>
-              <View style={styles.climaRelogioArea}>
-                <Text style={styles.climaText}>{clima.temperatura} {clima.icone}</Text>
-                <Text style={styles.relogio}>{hora}</Text>
-              </View>
+          </View>
+
+          <View style={styles.box}>
+            <TouchableOpacity activeOpacity={0.85} onPress={handleBatataClimaPress} style={styles.batataWrapper}>
+              <ImageBackground
+                source={require('../assets/images/batata-doce.png')}
+                style={styles.batataButton}
+                imageStyle={{ borderRadius: 16 }}
+              >
+                <View style={styles.climaRelogioArea}>
+                  <Text style={styles.climaText}>{clima.temperatura} {clima.icone}</Text>
+                  <Text style={styles.relogio}>{hora}</Text>
+                </View>
+              </ImageBackground>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* LINHA 2: espaço reservado — cronômetro foi movido para /cronometro */}
+        <View style={[styles.row, { justifyContent: 'center', alignItems: 'center' }]}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: '90%' }}>
+              <ImageBackground
+                source={require('../assets/images/batata-doce.png')}
+                style={[styles.batataButton, { paddingVertical: 28, alignItems: 'center' }]}
+                imageStyle={{ borderRadius: 18 }}
+              >
+                <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#fff', opacity: 0.6 }}>Cronômetro na tela separada</Text>
+                  <Text style={{ color: '#ffb300', marginTop: 8 }}>Use a área do personagem para abrir</Text>
+                </View>
+              </ImageBackground>
             </View>
           </View>
         </View>
-        {/* Cronômetro grande centralizado */}
-        <View style={styles.row}>
-          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-            <View style={styles.cronometroArea}>
-              {(() => {
-                const { hours, min, sec } = formatarTempo(cronometro);
-                return (
-                  <Text style={styles.cronometroTexto}>
-                    {hours}:{min}:{sec}
-                  </Text>
-                );
-              })()}
-              <View style={{flexDirection: 'row', gap: 16, marginTop: 12, justifyContent: 'center'}}>
-                <TouchableOpacity onPress={iniciarCronometro} style={styles.cronometroBtn}><Text style={styles.cronometroBtnTexto}>Iniciar</Text></TouchableOpacity>
-                <TouchableOpacity onPress={pausarCronometro} style={styles.cronometroBtn}><Text style={styles.cronometroBtnTexto}>Pausar</Text></TouchableOpacity>
-                <TouchableOpacity onPress={zerarCronometro} style={styles.cronometroBtn}><Text style={styles.cronometroBtnTexto}>Zerar</Text></TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </View>
+
+        {/* LINHA 3: Player Audius */}
         <View style={styles.row}>
           <View style={styles.box}><Text style={styles.boxText}></Text></View>
+
           <View style={styles.box}>
-            {/* Player Audius */}
-            <View style={styles.musicPlayerBg}>
+            <ImageBackground
+              source={require('../assets/images/batata-doce.png')}
+              style={[styles.musicPlayerBg, { padding: 12 }]}
+              imageStyle={{ borderRadius: 16 }}
+            >
               {audiusLoading ? (
                 <Text style={styles.musicNow}>Carregando músicas...</Text>
               ) : audiusTracks.length === 0 ? (
@@ -426,7 +373,6 @@ function Jogo() {
               ) : (
                 <View>
                   <View style={styles.musicTop}>
-                    {/* Se música local tocando, mostra nome dela */}
                     {currentLocalTrack ? (
                       <View style={{ flex: 1 }}>
                         <Text style={styles.musicName}>{currentLocalTrack.name}</Text>
@@ -434,134 +380,97 @@ function Jogo() {
                       </View>
                     ) : (
                       <>
-                        {audiusTracks[trackIdx].artwork && (
+                        {audiusTracks[trackIdx]?.artwork && (
                           <Image source={{ uri: audiusTracks[trackIdx].artwork['150x150'] }} style={styles.musicImg} />
                         )}
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.musicName}>{audiusTracks[trackIdx].title}</Text>
-                          <Text style={styles.musicArtist}>{audiusTracks[trackIdx].user && audiusTracks[trackIdx].user.name}</Text>
+                          <Text style={styles.musicName}>{audiusTracks[trackIdx]?.title}</Text>
+                          <Text style={styles.musicArtist}>{audiusTracks[trackIdx]?.user?.name}</Text>
                         </View>
                       </>
                     )}
                   </View>
+
                   <View style={styles.musicControlsMenu}>
                     <TouchableOpacity onPress={handlePrev} style={styles.musicBtn} disabled={loading}>
-                      <Image source={require('../assets/images/icons/anterior.png')} style={{width: 32, height: 32}} />
+                      <Image source={require('../assets/images/icons/musica/anterior.png')} style={{ width: 32, height: 32 }} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handlePlayPause} style={styles.musicBtn} disabled={loading}>
                       {loading ? (
                         <Text style={styles.musicBtnText}>...</Text>
                       ) : tocando ? (
-                        <Image source={require('../assets/images/icons/pause.png')} style={{width: 32, height: 32}} />
+                        <Image source={require('../assets/images/icons/musica/pause.png')} style={{ width: 32, height: 32 }} />
                       ) : (
-                        <Image source={require('../assets/images/icons/play.png')} style={{width: 32, height: 32}} />
+                        <Image source={require('../assets/images/icons/musica/play.png')} style={{ width: 32, height: 32 }} />
                       )}
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleNext} style={styles.musicBtn} disabled={loading}>
-                      <Image source={require('../assets/images/icons/proxima.png')} style={{width: 32, height: 32}} />
+                      <Image source={require('../assets/images/icons/musica/proxima.png')} style={{ width: 32, height: 32 }} />
                     </TouchableOpacity>
                   </View>
-                  {/* Ícones add e list abaixo dos controles */}
-                  <View style={{flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 12}}>
-                    <TouchableOpacity onPress={() => {console.log('Botão adicionar música clicado'); handleAddLocalMusic();}}>
-                      <Image source={require('../assets/images/icons/add.png')} style={{width: 28, height: 28}} />
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 12 }}>
+                    <TouchableOpacity onPress={handleAddLocalMusic}>
+                      <Image source={require('../assets/images/icons/musica/add.png')} style={{ width: 28, height: 28 }} />
                     </TouchableOpacity>
                     {localTracks.length > 0 && (
                       <TouchableOpacity onPress={() => setShowLocalList(v => !v)}>
-                        <Image source={require('../assets/images/icons/list.png')} style={{width: 28, height: 28}} />
+                        <Image source={require('../assets/images/icons/musica/list.png')} style={{ width: 28, height: 28 }} />
                       </TouchableOpacity>
                     )}
                   </View>
-                  {/* Músicas salvas do usuário logado */}
-                  <View style={{marginTop: 18}}>
-                    <Text style={{color: '#ffb300', fontWeight: 'bold', fontSize: 16}}>Minhas músicas salvas:</Text>
+
+                  <View style={{ marginTop: 18 }}>
+                    <Text style={{ color: '#ffb300', fontWeight: 'bold', fontSize: 16 }}>Minhas músicas salvas:</Text>
                     {userMusicasLoading ? (
-                      <Text style={{color: '#fff'}}>Carregando...</Text>
+                      <Text style={{ color: '#fff' }}>Carregando...</Text>
                     ) : userMusicas.length === 0 ? (
-                      <Text style={{color: '#fff'}}>Nenhuma música salva</Text>
+                      <Text style={{ color: '#fff' }}>Nenhuma música salva</Text>
                     ) : (
                       userMusicas.map(musica => (
-                        <TouchableOpacity key={musica.id} style={{padding: 8, marginVertical: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 8}} onPress={async () => await playLocalTrack({ name: musica.nome, uri: musica.caminho })}>
-                          <Text style={{color: '#fff'}}>{musica.nome}</Text>
+                        <TouchableOpacity key={musica.id} style={{ padding: 8, marginVertical: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 8 }} onPress={async () => await playLocalTrack({ name: musica.nome, uri: musica.caminho })}>
+                          <Text style={{ color: '#fff' }}>{musica.nome}</Text>
                         </TouchableOpacity>
                       ))
                     )}
                   </View>
                 </View>
               )}
-              {/* Lista de músicas locais */}
-              {/* Lista de músicas locais removida pois controles já estão visíveis */}
-            </View>
+            </ImageBackground>
           </View>
         </View>
-      </View>
-      {showLocalList && (
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.95)',
-          zIndex: 9999,
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 24,
-        }}>
-          <TouchableOpacity style={{marginBottom: 32}} onPress={() => setShowLocalList(false)}>
-            <Text style={{color: '#ffb300', fontSize: 22, fontWeight: 'bold'}}>Fechar</Text>
+
+        {/* HITBOX: retângulo onde a pessoa ficará (toque para abrir tela do cronômetro) */}
+        <TouchableOpacity
+          style={styles.personHitbox}
+          activeOpacity={0.8}
+          onPress={() => router.push('/cronometro')}
+        >
+          <Text style={{ color: '#ffb300', fontWeight: 'bold', textAlign: 'center' }}>Área do personagem{'\n'}(toque)</Text>
+        </TouchableOpacity>
+        
+        {/* Detalhe do clima (overlay simples) */}
+        {showClimaDetail && (
+          <TouchableOpacity style={{
+            position: 'absolute',
+            top: 120,
+            right: 24,
+            zIndex: 9999,
+          }} activeOpacity={1} onPress={() => setShowClimaDetail(false)}>
+            <View style={{ backgroundColor: 'rgba(0,0,0,0.85)', padding: 12, borderRadius: 12, minWidth: 180 }}>
+              <Text style={{ color: '#ffb300', fontWeight: 'bold', marginBottom: 6 }}>Clima</Text>
+              <Text style={{ color: '#fff' }}>{clima.temperatura} — {clima.icone}</Text>
+              <Text style={{ color: '#ccc', marginTop: 8, fontSize: 12 }}>Toque para fechar</Text>
+            </View>
           </TouchableOpacity>
-          <Text style={[styles.localMusicTitle, {fontSize: 24, color: '#ffb300'}]}>Músicas do dispositivo:</Text>
-          {localTracks.map((track, idx) => (
-            <TouchableOpacity key={track.uri} style={[styles.localMusicItem, {padding: 16, marginVertical: 8, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, width: '90%'}]} onPress={async () => await playLocalTrack(track)}>
-              <Text style={[styles.localMusicText, {fontSize: 18, textAlign: 'center'}]}>{track.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+        )}
+      </View>
     </ImageBackground>
   );
 }
 export default Jogo;
 
 const styles = StyleSheet.create({
-  cronometroArea: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 24,
-  },
-  cronometroTexto: {
-  fontSize: 64,
-  color: '#ffb300',
-  fontWeight: 'bold',
-  letterSpacing: 2,
-  textAlign: 'center',
-  marginBottom: 8,
-  flexDirection: 'row',
-  alignItems: 'flex-end',
-  },
-  cronometroMilis: {
-  fontSize: 32,
-  color: '#ffb300',
-  fontWeight: 'bold',
-  opacity: 0.7,
-  marginLeft: 4,
-  position: 'relative',
-  top: 16,
-  },
-  cronometroBtn: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-  },
-  cronometroBtnTexto: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   addMusicBtnAlways: {
     backgroundColor: '#ffb300',
     padding: 12,
@@ -704,17 +613,17 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   box: {
-  flex: 1,
-  margin: 8,
-  backgroundColor: 'transparent',
-  borderRadius: 18,
-  justifyContent: 'center',
-  alignItems: 'center',
-  shadowColor: 'transparent',
-  shadowOffset: { width: 0, height: 0 },
-  shadowOpacity: 0,
-  shadowRadius: 0,
-  elevation: 0,
+    flex: 1,
+    margin: 8,
+    backgroundColor: 'transparent',
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   boxText: {
     color: '#0a174e',
@@ -726,7 +635,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
     position: 'relative',
-    paddingBottom: 64, // ainda mais alto
+    paddingBottom: 64,
   },
   climaRelogioArea: {
     alignItems: 'center',
@@ -762,7 +671,35 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 6,
-    marginTop: 0,
+    marginTop: 8,
   },
   text: { color: "#fff", fontSize: 28, fontWeight: "bold" },
+
+  /* estilos novos para batat-doce buttons */
+  batataWrapper: {
+    width: '90%',
+    alignSelf: 'center',
+  },
+  batataButton: {
+    width: '100%',
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  personHitbox: {
+    position: 'absolute',
+    width: 120,
+    height: 200,
+    left: '10%',
+    top: '42%',
+    borderWidth: 2,
+    borderColor: '#ffb300',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,179,0,0.06)',
+    zIndex: 15,
+    padding: 8,
+  },
 });

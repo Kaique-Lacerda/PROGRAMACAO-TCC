@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
-// Altere o IP abaixo para o IP local da sua máquina
-const BACKEND_IP = 'http://10.0.12.148:3001';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ImageBackground,
+  ActivityIndicator,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const BACKEND_IP = 'http://10.0.12.148:3001';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -10,19 +18,18 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('');
   const [isRegister, setIsRegister] = useState(false);
 
-  // ...existing code...
-
   const handleSubmit = async () => {
     setError('');
-  const url = isRegister ? `${BACKEND_IP}/register` : `${BACKEND_IP}/login`;
+    const url = isRegister ? `${BACKEND_IP}/register` : `${BACKEND_IP}/login`;
     try {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
+
       if (isRegister) {
         setIsRegister(false);
         setError('Cadastro realizado! Faça login.');
@@ -37,11 +44,16 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require('../assets/images/background.png')}
+      resizeMode="cover"
+      style={styles.background}
+    >
       <Text style={styles.title}>{isRegister ? 'Cadastro' : 'Login'}</Text>
       <TextInput
         style={styles.input}
         placeholder="Usuário"
+        placeholderTextColor="#ccc"
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
@@ -49,6 +61,7 @@ export default function Login({ onLogin }) {
       <TextInput
         style={styles.input}
         placeholder="Senha"
+        placeholderTextColor="#ccc"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -56,49 +69,61 @@ export default function Login({ onLogin }) {
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
         <Text style={styles.buttonText}>{isRegister ? 'Cadastrar' : 'Entrar'}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.switchButton} onPress={() => setIsRegister(!isRegister)}>
-        <Text style={styles.switchButtonText}>{isRegister ? 'Já tenho conta' : 'Quero me cadastrar'}</Text>
+      <TouchableOpacity
+        style={styles.switchButton}
+        onPress={() => setIsRegister(!isRegister)}
+      >
+        <Text style={styles.switchButtonText}>
+          {isRegister ? 'Já tenho conta' : 'Quero me cadastrar'}
+        </Text>
       </TouchableOpacity>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    maxWidth: 300,
-    alignSelf: 'center',
-    marginTop: 40,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    backgroundColor: '#fff',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  background: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
+    color: '#fff',
+    fontFamily: 'Lobs-Bold',
   },
   input: {
-    width: '100%',
+    width: '80%',
     height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fff',
     marginBottom: 10,
     paddingHorizontal: 10,
+    fontFamily: 'Lobs',
+    color: '#fff',
   },
   button: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#425296ff',
     paddingVertical: 10,
     borderRadius: 4,
     marginBottom: 10,
+    width: '80%',
   },
   buttonText: {
     color: '#fff',
     textAlign: 'center',
+    fontFamily: 'Lobs-Bold',
     fontWeight: 'bold',
   },
   switchButton: {
@@ -106,15 +131,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 4,
     marginBottom: 10,
+    width: '80%',
   },
   switchButtonText: {
     color: '#007bff',
     textAlign: 'center',
+    fontFamily: 'Lobs',
     fontWeight: 'bold',
   },
   error: {
     color: 'red',
     marginTop: 10,
     textAlign: 'center',
+    fontFamily: 'Lobs',
   },
 });
