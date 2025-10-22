@@ -7,25 +7,14 @@ import { useRouter } from 'expo-router';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 
-//LINKAR COM O LOGIN
 function Jogo() {
   const router = useRouter();
   const handleLoginPress = () => {
     router.push('/login');
   };
 
-  function formatarTempo(ms) {
-    const totalSeconds = Math.floor(ms / 1000);
-    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-    const min = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-    const sec = String(totalSeconds % 60).padStart(2, '0');
-    return { hours, min, sec };
-  }
-
-  // TODOS os hooks SEMPRE no topo
+  // Estados utilizados
   const [hora, setHora] = useState('');
-  const [token, setToken] = useState(null);
-  const [checkingToken, setCheckingToken] = useState(true);
   const [userMusicas, setUserMusicas] = useState([]);
   const [userMusicasLoading, setUserMusicasLoading] = useState(false);
   const [audiusTracks, setAudiusTracks] = useState([]);
@@ -37,9 +26,7 @@ function Jogo() {
   const [clima, setClima] = useState({ temperatura: '--', icone: '--' });
   const [localTracks, setLocalTracks] = useState([]);
   const [currentLocalTrack, setCurrentLocalTrack] = useState(null);
-  const [showLocalList, setShowLocalList] = useState(false);
-
-  // Mostrar detalhe do clima ao tocar na batata
+  const [showMusicContainer, setShowMusicContainer] = useState(false);
   const [showClimaDetail, setShowClimaDetail] = useState(false);
 
   // Ao tocar na batata do clima, abre/fecha detalhe
@@ -47,16 +34,13 @@ function Jogo() {
     setShowClimaDetail(v => !v);
   };
 
-  useEffect(() => {
-    (async () => {
-      let t = await AsyncStorage.getItem('token');
-      setToken(t);
-      setCheckingToken(false);
-    })();
-  }, []);
+  // Abrir/fechar container de música
+  const toggleMusicContainer = () => {
+    setShowMusicContainer(v => !v);
+  };
 
   // Buscar músicas do usuário logado
-  const BACKEND_IP = 'http://192.168.0.100:3001'; // Altere para o IP da sua máquina
+  const BACKEND_IP = 'http://192.168.0.100:3001';
   const fetchUserMusicas = async () => {
     setUserMusicasLoading(true);
     try {
@@ -143,6 +127,26 @@ function Jogo() {
     fetchAudiusTracks();
   }, [fetchAudiusTracks]);
 
+  // Selecionar música do dispositivo
+  const handleAddLocalMusic = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*' });
+      console.log('Retorno do DocumentPicker:', result);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setLocalTracks(prev => [...prev, ...result.assets]);
+        // Salvar cada música selecionada no backend
+        for (const track of result.assets) {
+          await handleSaveLocalTrack(track);
+        }
+      } else {
+        alert('Seleção de arquivo não foi bem-sucedida.');
+      }
+    } catch (e) {
+      alert('Erro ao selecionar música.');
+      console.log('Erro ao selecionar música:', e);
+    }
+  };
+
   // Salvar música local no backend
   const handleSaveLocalTrack = async (track) => {
     try {
@@ -163,26 +167,6 @@ function Jogo() {
       }
     } catch (e) {
       alert('Erro ao salvar música.');
-    }
-  };
-
-  // Selecionar música do dispositivo
-  const handleAddLocalMusic = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*' });
-      console.log('Retorno do DocumentPicker:', result);
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setLocalTracks(prev => [...prev, ...result.assets]);
-        // Salvar cada música selecionada no backend
-        for (const track of result.assets) {
-          await handleSaveLocalTrack(track);
-        }
-      } else {
-        alert('Seleção de arquivo não foi bem-sucedida.');
-      }
-    } catch (e) {
-      alert('Erro ao selecionar música.');
-      console.log('Erro ao selecionar música:', e);
     }
   };
 
@@ -334,85 +318,98 @@ function Jogo() {
           </View>
         </View>
 
-        {/* LINHA 3: Player Audius */}
-        <View style={styles.row}>
-          <View style={styles.box}><Text style={styles.boxText}></Text></View>
+        {/* LINHA 3: Player Audius - AGORA CONDICIONAL */}
+        {showMusicContainer && (
+          <View style={styles.row}>
+            <View style={styles.box}><Text style={styles.boxText}></Text></View>
 
-          <View style={styles.box}>
-            <View style={[styles.musicPlayerBg, { padding: 12, borderRadius: 16 }]}>
-              {audiusLoading ? (
-                <Text style={styles.musicNow}>Carregando músicas...</Text>
-              ) : audiusTracks.length === 0 ? (
-                <Text style={styles.musicNow}>Nenhuma música encontrada</Text>
-              ) : (
-                <View>
-                  <View style={styles.musicTop}>
-                    {currentLocalTrack ? (
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.musicName}>{currentLocalTrack.name}</Text>
-                        <Text style={styles.musicArtist}>Música do dispositivo</Text>
-                      </View>
-                    ) : (
-                      <>
-                        {audiusTracks[trackIdx]?.artwork && (
-                          <Image source={{ uri: audiusTracks[trackIdx].artwork['150x150'] }} style={styles.musicImg} />
-                        )}
+            <View style={styles.box}>
+              <View style={[styles.musicPlayerBg, { padding: 12, borderRadius: 16 }]}>
+                {audiusLoading ? (
+                  <Text style={styles.musicNow}>Carregando músicas...</Text>
+                ) : audiusTracks.length === 0 ? (
+                  <Text style={styles.musicNow}>Nenhuma música encontrada</Text>
+                ) : (
+                  <View>
+                    <View style={styles.musicTop}>
+                      {currentLocalTrack ? (
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.musicName}>{audiusTracks[trackIdx]?.title}</Text>
-                          <Text style={styles.musicArtist}>{audiusTracks[trackIdx]?.user?.name}</Text>
+                          <Text style={styles.musicName}>{currentLocalTrack.name}</Text>
+                          <Text style={styles.musicArtist}>Música do dispositivo</Text>
                         </View>
-                      </>
-                    )}
-                  </View>
-
-                  <View style={styles.musicControlsMenu}>
-                    <TouchableOpacity onPress={handlePrev} style={styles.musicBtn} disabled={loading}>
-                      <Image source={require('../assets/images/icons/musica/anterior.png')} style={{ width: 32, height: 32 }} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handlePlayPause} style={styles.musicBtn} disabled={loading}>
-                      {loading ? (
-                        <Text style={styles.musicBtnText}>...</Text>
-                      ) : tocando ? (
-                        <Image source={require('../assets/images/icons/musica/pause.png')} style={{ width: 32, height: 32 }} />
                       ) : (
-                        <Image source={require('../assets/images/icons/musica/play.png')} style={{ width: 32, height: 32 }} />
+                        <>
+                          {audiusTracks[trackIdx]?.artwork && (
+                            <Image source={{ uri: audiusTracks[trackIdx].artwork['150x150'] }} style={styles.musicImg} />
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.musicName}>{audiusTracks[trackIdx]?.title}</Text>
+                            <Text style={styles.musicArtist}>{audiusTracks[trackIdx]?.user?.name}</Text>
+                          </View>
+                        </>
                       )}
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleNext} style={styles.musicBtn} disabled={loading}>
-                      <Image source={require('../assets/images/icons/musica/proxima.png')} style={{ width: 32, height: 32 }} />
-                    </TouchableOpacity>
-                  </View>
+                    </View>
 
-                  <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 12 }}>
-                    <TouchableOpacity onPress={handleAddLocalMusic}>
-                      <Image source={require('../assets/images/icons/musica/add.png')} style={{ width: 28, height: 28 }} />
-                    </TouchableOpacity>
-                    {localTracks.length > 0 && (
-                      <TouchableOpacity onPress={() => setShowLocalList(v => !v)}>
-                        <Image source={require('../assets/images/icons/musica/list.png')} style={{ width: 28, height: 28 }} />
+                    <View style={styles.musicControlsMenu}>
+                      <TouchableOpacity onPress={handlePrev} style={styles.musicBtn} disabled={loading}>
+                        <Image source={require('../assets/images/icons/musica/anterior.png')} style={{ width: 32, height: 32 }} />
                       </TouchableOpacity>
-                    )}
-                  </View>
+                      <TouchableOpacity onPress={handlePlayPause} style={styles.musicBtn} disabled={loading}>
+                        {loading ? (
+                          <Text style={styles.musicBtnText}>...</Text>
+                        ) : tocando ? (
+                          <Image source={require('../assets/images/icons/musica/pause.png')} style={{ width: 32, height: 32 }} />
+                        ) : (
+                          <Image source={require('../assets/images/icons/musica/play.png')} style={{ width: 32, height: 32 }} />
+                        )}
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={handleNext} style={styles.musicBtn} disabled={loading}>
+                        <Image source={require('../assets/images/icons/musica/proxima.png')} style={{ width: 32, height: 32 }} />
+                      </TouchableOpacity>
+                    </View>
 
-                  <View style={{ marginTop: 18 }}>
-                    <Text style={{ color: '#ffb300', fontWeight: 'bold', fontSize: 16 }}>Minhas músicas salvas:</Text>
-                    {userMusicasLoading ? (
-                      <Text style={{ color: '#fff' }}>Carregando...</Text>
-                    ) : userMusicas.length === 0 ? (
-                      <Text style={{ color: '#fff' }}>Nenhuma música salva</Text>
-                    ) : (
-                      userMusicas.map(musica => (
-                        <TouchableOpacity key={musica.id} style={{ padding: 8, marginVertical: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 8 }} onPress={async () => await playLocalTrack({ name: musica.nome, uri: musica.caminho })}>
-                          <Text style={{ color: '#fff' }}>{musica.nome}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 12 }}>
+                      <TouchableOpacity onPress={handleAddLocalMusic}>
+                        <Image source={require('../assets/images/icons/musica/add.png')} style={{ width: 28, height: 28 }} />
+                      </TouchableOpacity>
+                      {localTracks.length > 0 && (
+                        <TouchableOpacity onPress={() => {}}>
+                          <Image source={require('../assets/images/icons/musica/list.png')} style={{ width: 28, height: 28 }} />
                         </TouchableOpacity>
-                      ))
-                    )}
+                      )}
+                    </View>
+
+                    <View style={{ marginTop: 18 }}>
+                      <Text style={{ color: '#ffb300', fontWeight: 'bold', fontSize: 16 }}>Minhas músicas salvas:</Text>
+                      {userMusicasLoading ? (
+                        <Text style={{ color: '#fff' }}>Carregando...</Text>
+                      ) : userMusicas.length === 0 ? (
+                        <Text style={{ color: '#fff' }}>Nenhuma música salva</Text>
+                      ) : (
+                        userMusicas.map(musica => (
+                          <TouchableOpacity key={musica.id} style={{ padding: 8, marginVertical: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 8 }} onPress={async () => await playLocalTrack({ name: musica.nome, uri: musica.caminho })}>
+                            <Text style={{ color: '#fff' }}>{musica.nome}</Text>
+                          </TouchableOpacity>
+                        ))
+                      )}
+                    </View>
                   </View>
-                </View>
-              )}
+                )}
+              </View>
             </View>
           </View>
-        </View>
+        )}
+
+        {/* BOTÃO: Abrir/fechar container de música */}
+        <TouchableOpacity
+          style={styles.musicToggleHitbox}
+          activeOpacity={0.8}
+          onPress={toggleMusicContainer}
+        >
+          <Text style={{ color: '#ffb300', fontWeight: 'bold', textAlign: 'center', fontSize: 12 }}>
+            {showMusicContainer ? 'Fechar' : 'Abrir'}{'\n'}Música
+          </Text>
+        </TouchableOpacity>
 
         {/* HITBOX: retângulo onde a pessoa ficará (toque para abrir tela do cronômetro) */}
         <TouchableOpacity
@@ -420,7 +417,16 @@ function Jogo() {
           activeOpacity={0.8}
           onPress={() => router.push('/cronometro')}
         >
-          <Text style={{ color: '#ffb300', fontWeight: 'bold', textAlign: 'center' }}>Área do personagem{'\n'}(toque)</Text>
+          <Text style={{ color: '#ffb300', fontWeight: 'bold', textAlign: 'center', fontSize: 12 }}>Área do personagem{'\n'}(toque)</Text>
+        </TouchableOpacity>
+
+        {/* HITBOX: Personagem Focus - posicionada embaixo */}
+        <TouchableOpacity
+          style={styles.focusHitbox}
+          activeOpacity={0.8}
+          onPress={() => router.push('/focus')}
+        >
+          <Text style={{ color: '#ffb300', fontWeight: 'bold', textAlign: 'center', fontSize: 12 }}>Foco{'\n'}(toque)</Text>
         </TouchableOpacity>
         
         {/* Detalhe do clima (overlay simples) */}
@@ -445,51 +451,6 @@ function Jogo() {
 export default Jogo;
 
 const styles = StyleSheet.create({
-  addMusicBtnAlways: {
-    backgroundColor: '#ffb300',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-    alignSelf: 'center',
-    width: '90%',
-    elevation: 4,
-  },
-  addMusicBtnContainer: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  addMusicBtn: {
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    padding: 8,
-    borderRadius: 8,
-    marginBottom: 8,
-    alignSelf: 'center',
-  },
-  addMusicBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  localMusicList: {
-    marginTop: 12,
-    padding: 8,
-    backgroundColor: 'rgba(0,0,0,0.10)',
-    borderRadius: 8,
-  },
-  localMusicTitle: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginBottom: 4,
-  },
-  localMusicItem: {
-    paddingVertical: 4,
-  },
-  localMusicText: {
-    color: '#fff',
-    fontSize: 14,
-  },
   musicArtist: {
     color: '#ccc',
     fontSize: 14,
@@ -536,12 +497,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     flexShrink: 1,
-  },
-  musicControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
   },
   musicBtn: {
     marginHorizontal: 12,
@@ -604,23 +559,10 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
   },
-  relogioArea: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    position: 'relative',
-    paddingBottom: 64,
-  },
   climaRelogioArea: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 0,
-  },
-  climaArea: {
-    marginTop: 8,
-    marginBottom: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   climaText: {
     color: '#fff',
@@ -631,10 +573,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 2,
-  },
-  relogioSpacer: {
-    flex: 0,
-    height: '70%',
   },
   relogio: {
     color: '#fff',
@@ -647,9 +585,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginTop: 8,
   },
-  text: { color: "#fff", fontSize: 28, fontWeight: "bold" },
-
-  /* estilos novos para batat-doce buttons */
   batataWrapper: {
     width: '90%',
     alignSelf: 'center',
@@ -661,12 +596,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
   },
+  musicToggleHitbox: {
+    position: 'absolute',
+    width: 120,
+    height: 80,
+    right: '10%',
+    top: '35%',
+    borderWidth: 2,
+    borderColor: '#ffb300',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,179,0,0.06)',
+    zIndex: 15,
+    padding: 4,
+  },
   personHitbox: {
     position: 'absolute',
     width: 120,
-    height: 200,
-    left: '10%',
-    top: '42%',
+    height: 250,
+    left: '5%',
+    top: '35%',
+    borderWidth: 2,
+    borderColor: '#ffb300',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,179,0,0.06)',
+    zIndex: 15,
+    padding: 8,
+  },
+  focusHitbox: {
+    position: 'absolute',
+    width: 200,
+    height: 400,
+    left: '45%',
+    bottom: '5%',
     borderWidth: 2,
     borderColor: '#ffb300',
     borderRadius: 8,
