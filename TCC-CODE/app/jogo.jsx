@@ -1,20 +1,36 @@
 //IMPORTS
+import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, ImageBackground } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  Image, 
+  ImageBackground, 
+  ActivityIndicator 
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
+import Login from './login';
+
+const BACKEND_IP = 'https://fair-between-empty-recorded.trycloudflare.com';
 
 function Jogo() {
   const router = useRouter();
-  const handleLoginPress = () => {
-    router.push('/login');
-  };
+  
+  // === TODOS OS HOOKS NO INÍCIO - ORDEM CORRETA ===
+  
+  // Estados de autenticação
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   // Estados utilizados
   const [hora, setHora] = useState('');
+  const [cenarioAtual, setCenarioAtual] = useState('dia_ensolarado');
   const [userMusicas, setUserMusicas] = useState([]);
   const [userMusicasLoading, setUserMusicasLoading] = useState(false);
   const [audiusTracks, setAudiusTracks] = useState([]);
@@ -29,47 +45,33 @@ function Jogo() {
   const [showMusicContainer, setShowMusicContainer] = useState(false);
   const [showClimaDetail, setShowClimaDetail] = useState(false);
 
-  // Ao tocar na batata do clima, abre/fecha detalhe
-  const handleBatataClimaPress = () => {
-    setShowClimaDetail(v => !v);
-  };
+  // === TODOS OS USEEFFECT NO INÍCIO ===
 
-  // Abrir/fechar container de música
-  const toggleMusicContainer = () => {
-    setShowMusicContainer(v => !v);
-  };
-
-  // Buscar músicas do usuário logado
-  const BACKEND_IP = 'http://192.168.0.100:3001';
-  const fetchUserMusicas = async () => {
-    setUserMusicasLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${BACKEND_IP}/musicas`, {
-        headers: { 'Authorization': token }
-      });
-      const data = await res.json();
-      setUserMusicas(data);
-    } catch (e) {
-      setUserMusicas([]);
-    }
-    setUserMusicasLoading(false);
-  };
-
+  // Verificar autenticação ao carregar
   useEffect(() => {
-    fetchUserMusicas();
+    checkAuthStatus();
   }, []);
 
+  // Atualizar hora e cenário
   useEffect(() => {
-    const updateHora = () => {
+    const updateHoraECenario = () => {
       const now = new Date();
-      setHora(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      const horaFormatada = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setHora(horaFormatada);
+      
+      // Atualiza cenário baseado na hora + clima
+      const novoCenario = determinarCenarioCompleto(horaFormatada, clima);
+      if (novoCenario !== cenarioAtual) {
+        setCenarioAtual(novoCenario);
+      }
     };
-    updateHora();
-    const timer = setInterval(updateHora, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
+    updateHoraECenario();
+    const timer = setInterval(updateHoraECenario, 30000); // Atualiza a cada 30 segundos
+    return () => clearInterval(timer);
+  }, [clima, cenarioAtual]);
+
+  // Buscar clima
   useEffect(() => {
     async function getLocationAndFetchClima() {
       try {
@@ -90,7 +92,11 @@ function Jogo() {
           if (status === 'Clear') icone = '☀️ Sol';
           else if (status === 'Rain' || status === 'Drizzle') icone = '🌧️ Chuva';
           else if (status === 'Clouds') icone = '☁️ Nublado';
+          else if (status === 'Thunderstorm') icone = '⛈️ Tempestade';
+          else if (status === 'Snow') icone = '❄️ Neve';
+          else if (status === 'Mist' || status === 'Fog') icone = '🌫️ Neblina';
           else icone = `${status}`;
+          
           setClima({
             temperatura: `${Math.round(data.main.temp)}°C`,
             icone: icone
@@ -100,16 +106,15 @@ function Jogo() {
             temperatura: '--',
             icone: '--'
           });
-          alert('Não foi possível obter o clima. Verifique a chave da API ou tente novamente.');
         }
       } catch (e) {
         setClima({ temperatura: '--', icone: '--' });
-        alert('Erro ao obter o clima.');
       }
     }
     getLocationAndFetchClima();
   }, []);
 
+  // Buscar músicas do Audius
   const fetchAudiusTracks = useCallback(async () => {
     setAudiusLoading(true);
     try {
@@ -127,14 +132,163 @@ function Jogo() {
     fetchAudiusTracks();
   }, [fetchAudiusTracks]);
 
-  // Selecionar música do dispositivo
+  // Buscar músicas do usuário quando logado
+  useEffect(() => {
+    if (isLoggedIn) {
+      const fetchUserMusicas = async () => {
+        setUserMusicasLoading(true);
+        try {
+          const token = await AsyncStorage.getItem('token');
+          const res = await fetch(`${BACKEND_IP}/musicas`, {
+            headers: { 'Authorization': token }
+          });
+          const data = await res.json();
+          setUserMusicas(data);
+        } catch (e) {
+          setUserMusicas([]);
+        }
+        setUserMusicasLoading(false);
+      };
+      fetchUserMusicas();
+    }
+  }, [isLoggedIn]);
+
+  // === FUNÇÕES DOS CENÁRIOS DINÂMICOS ===
+
+  // Função que combina horário + clima para determinar cenário
+  const determinarCenarioCompleto = (horaAtual, climaAtual) => {
+    const hora = parseInt(horaAtual.split(':')[0]);
+    const condicaoClima = climaAtual.icone.toLowerCase();
+    
+    // Determina o período do dia
+    let periodo = 'dia';
+    if (hora >= 5 && hora < 12) periodo = 'manha';
+    else if (hora >= 12 && hora < 17) periodo = 'tarde';
+    else if (hora >= 17 && hora < 20) periodo = 'entardecer';
+    else periodo = 'noite';
+    
+    // Determina a condição climática
+    let condicao = 'ensolarado';
+    if (condicaoClima.includes('chuva') || condicaoClima.includes('rain') || condicaoClima.includes('drizzle')) {
+      condicao = 'chuvoso';
+    } else if (condicaoClima.includes('nublado') || condicaoClima.includes('cloud')) {
+      condicao = 'nublado';
+    } else if (condicaoClima.includes('tempestade') || condicaoClima.includes('thunderstorm')) {
+      condicao = 'tempestade';
+    } else if (condicaoClima.includes('neve') || condicaoClima.includes('snow')) {
+      condicao = 'nevando';
+    } else if (condicaoClima.includes('neblina') || condicaoClima.includes('mist') || condicaoClima.includes('fog')) {
+      condicao = 'neblina';
+    } else if (condicaoClima.includes('sol') || condicaoClima.includes('clear')) {
+      condicao = 'ensolarado';
+    }
+    
+    return `${periodo}_${condicao}`;
+  };
+
+  // Função para obter a imagem do cenário
+  const getCenarioSource = (cenario) => {
+    // Por enquanto, usando placeholder - depois você substitui pelos GIFs reais
+    switch (cenario) {
+      // MANHÃ
+      case 'manha_ensolarado':
+        return require('../assets/images/background.png');
+      case 'manha_nublado':
+        return require('../assets/images/background.png');
+      case 'manha_chuvoso':
+        return require('../assets/images/background.png');
+      case 'manha_tempestade':
+        return require('../assets/images/background.png');
+      case 'manha_nevando':
+        return require('../assets/images/background.png');
+      case 'manha_neblina':
+        return require('../assets/images/background.png');
+      
+      // TARDE
+      case 'tarde_ensolarado':
+        return require('../assets/images/background.png');
+      case 'tarde_nublado':
+        return require('../assets/images/background.png');
+      case 'tarde_chuvoso':
+        return require('../assets/images/background.png');
+      case 'tarde_tempestade':
+        return require('../assets/images/background.png');
+      
+      // ENTARDECER
+      case 'entardecer_ensolarado':
+        return require('../assets/images/background.png');
+      case 'entardecer_nublado':
+        return require('../assets/images/background.png');
+      case 'entardecer_chuvoso':
+        return require('../assets/images/background.png');
+      
+      // NOITE
+      case 'noite_ensolarado':
+        return require('../assets/images/background.png');
+      case 'noite_nublado':
+        return require('../assets/images/background.png');
+      case 'noite_chuvoso':
+        return require('../assets/images/background.png');
+      case 'noite_tempestade':
+        return require('../assets/images/background.png');
+      case 'noite_estrelado':
+        return require('../assets/images/background.png');
+      
+      default:
+        return require('../assets/images/background.png');
+    }
+  };
+
+  // === FUNÇÕES DE AUTENTICAÇÃO ===
+
+  const checkAuthStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        setIsLoggedIn(true);
+      }
+    } catch (error) {
+      console.log('Erro ao verificar autenticação:', error);
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
+
+  const handleLogin = (token) => {
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('token');
+      setIsLoggedIn(false);
+      if (sound) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+        setSound(null);
+        setTocando(false);
+      }
+    } catch (error) {
+      console.log('Erro ao fazer logout:', error);
+    }
+  };
+
+  // === FUNÇÕES DO JOGO ===
+
+  const handleBatataClimaPress = () => {
+    setShowClimaDetail(v => !v);
+  };
+
+  const toggleMusicContainer = () => {
+    setShowMusicContainer(v => !v);
+  };
+
   const handleAddLocalMusic = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*' });
       console.log('Retorno do DocumentPicker:', result);
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setLocalTracks(prev => [...prev, ...result.assets]);
-        // Salvar cada música selecionada no backend
         for (const track of result.assets) {
           await handleSaveLocalTrack(track);
         }
@@ -147,7 +301,6 @@ function Jogo() {
     }
   };
 
-  // Salvar música local no backend
   const handleSaveLocalTrack = async (track) => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -160,6 +313,18 @@ function Jogo() {
         body: JSON.stringify({ nome: track.name, caminho: track.uri })
       });
       if (res.ok) {
+        const fetchUserMusicas = async () => {
+          try {
+            const token = await AsyncStorage.getItem('token');
+            const res = await fetch(`${BACKEND_IP}/musicas`, {
+              headers: { 'Authorization': token }
+            });
+            const data = await res.json();
+            setUserMusicas(data);
+          } catch (e) {
+            setUserMusicas([]);
+          }
+        };
         await fetchUserMusicas();
         alert('Música salva!');
       } else {
@@ -170,7 +335,6 @@ function Jogo() {
     }
   };
 
-  // Tocar música local e atualizar nome
   const playLocalTrack = async (track) => {
     if (loading) return;
     if (!track || !track.uri) return;
@@ -181,7 +345,6 @@ function Jogo() {
     }
     setLoading(true);
     try {
-      // Configura o modo de reprodução para background
       await Audio.setAudioModeAsync({
         staysActiveInBackground: true,
         shouldDuckAndroid: true,
@@ -225,7 +388,6 @@ function Jogo() {
 
   const handlePlayPause = async () => {
     if (loading) return;
-    // Se música local está selecionada, controla ela
     if (currentLocalTrack) {
       if (!sound) {
         await playLocalTrack(currentLocalTrack);
@@ -238,7 +400,6 @@ function Jogo() {
       }
       return;
     }
-    // Caso contrário, controla Audius
     if (audiusTracks.length === 0) return;
     const track = audiusTracks[trackIdx];
     const streamUrl = track.stream_url || (track.permalink ? track.permalink + '/stream' : null);
@@ -248,7 +409,6 @@ function Jogo() {
       await sound.pauseAsync();
       setTocando(false);
     } else {
-      // Ao despausar, apenas continua a música
       await sound.playAsync();
       setTocando(true);
     }
@@ -272,9 +432,37 @@ function Jogo() {
     await playAudiusTrack(streamUrl);
   };
 
+  // === RENDERIZAÇÃO CONDICIONAL ===
+
+  if (checkingAuth) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ffb300" />
+        <Text style={{ color: '#fff', marginTop: 10 }}>Verificando autenticação...</Text>
+      </View>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  // === RENDER PRINCIPAL ===
+
   return (
-    <ImageBackground source={require('../assets/images/background2.gif')} style={styles.container} resizeMode="cover">
-      {/* Botão de login no canto superior direito */}
+    <ImageBackground 
+      source={getCenarioSource(cenarioAtual)}
+      style={styles.container}
+      resizeMode="cover"
+    >
+      {/* Info do cenário atual (debug) */}
+      <View style={styles.cenarioInfo}>
+        <Text style={styles.cenarioText}>
+          🌅 {cenarioAtual.replace('_', ' ')}
+        </Text>
+      </View>
+
+      {/* Botão de logout no canto superior direito */}
       <TouchableOpacity
         style={{
           position: 'absolute',
@@ -286,10 +474,10 @@ function Jogo() {
           borderRadius: 12,
           zIndex: 20,
         }}
-        onPress={handleLoginPress}
+        onPress={handleLogout}
         activeOpacity={0.7}
       >
-        <Text style={{ color: '#ffb300', fontWeight: 'bold', fontSize: 16 }}>Login</Text>
+        <Text style={{ color: '#ffb300', fontWeight: 'bold', fontSize: 16 }}>Sair</Text>
       </TouchableOpacity>
 
       {/* Menu hamburger opaco */}
@@ -318,7 +506,7 @@ function Jogo() {
           </View>
         </View>
 
-        {/* LINHA 3: Player Audius - AGORA CONDICIONAL */}
+        {/* LINHA 3: Player Audius - CONDICIONAL */}
         {showMusicContainer && (
           <View style={styles.row}>
             <View style={styles.box}><Text style={styles.boxText}></Text></View>
@@ -411,7 +599,7 @@ function Jogo() {
           </Text>
         </TouchableOpacity>
 
-        {/* HITBOX: retângulo onde a pessoa ficará (toque para abrir tela do cronômetro) */}
+        {/* HITBOX: Área do personagem */}
         <TouchableOpacity
           style={styles.personHitbox}
           activeOpacity={0.8}
@@ -420,7 +608,7 @@ function Jogo() {
           <Text style={{ color: '#ffb300', fontWeight: 'bold', textAlign: 'center', fontSize: 12 }}>Área do personagem{'\n'}(toque)</Text>
         </TouchableOpacity>
 
-        {/* HITBOX: Personagem Focus - posicionada embaixo */}
+        {/* HITBOX: Personagem Focus */}
         <TouchableOpacity
           style={styles.focusHitbox}
           activeOpacity={0.8}
@@ -429,7 +617,7 @@ function Jogo() {
           <Text style={{ color: '#ffb300', fontWeight: 'bold', textAlign: 'center', fontSize: 12 }}>Foco{'\n'}(toque)</Text>
         </TouchableOpacity>
         
-        {/* Detalhe do clima (overlay simples) */}
+        {/* Detalhe do clima */}
         {showClimaDetail && (
           <TouchableOpacity style={{
             position: 'absolute',
@@ -448,9 +636,31 @@ function Jogo() {
     </ImageBackground>
   );
 }
+
 export default Jogo;
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  cenarioInfo: {
+    position: 'absolute',
+    top: 80,
+    left: 24,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  cenarioText: {
+    color: '#ffb300',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   musicArtist: {
     color: '#ccc',
     fontSize: 14,

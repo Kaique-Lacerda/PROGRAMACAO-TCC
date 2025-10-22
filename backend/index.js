@@ -8,7 +8,18 @@ const app = express();
 const db = new sqlite3.Database('./db.sqlite');
 const SECRET = 'tcc_secret_key';
 
-app.use(cors());
+// CORS configurado para o Codespace
+app.use(cors({
+  origin: [
+    'https://shiny-palm-tree-q777475466ww2v5g.github.dev',
+    'https://*.github.dev',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'exp://*'
+  ],
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Criação das tabelas
@@ -27,6 +38,14 @@ const createTables = () => {
   )`);
 };
 createTables();
+
+// Rota de teste
+app.get('/', (req, res) => {
+  res.json({ 
+    message: '✅ API funcionando!',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Cadastro de usuário
 app.post('/register', (req, res) => {
@@ -88,7 +107,6 @@ app.get('/musicas', auth, (req, res) => {
   });
 });
 
-
 // Endpoint para listar todos os usuários cadastrados
 app.get('/users', (req, res) => {
   db.all('SELECT id, username FROM users', [], (err, rows) => {
@@ -97,6 +115,10 @@ app.get('/users', (req, res) => {
   });
 });
 
-app.listen(3001, () => {
-  console.log('API rodando na porta 3001');
+// Iniciar servidor
+app.listen(3001, '0.0.0.0', () => {
+  console.log('🚀 API rodando na porta 3001');
+  console.log('📍 URL do Codespace: https://shiny-palm-tree-q777475466ww2v5g.github.dev');
+  console.log('📝 Teste: https://shiny-palm-tree-q777475466ww2v5g.github.dev/users');
+  console.log('📝 Teste: https://shiny-palm-tree-q777475466ww2v5g.github.dev/');
 });

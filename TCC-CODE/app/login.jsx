@@ -10,46 +10,98 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_IP = 'http://10.0.12.148:3001';
+const BACKEND_IP = 'https://fair-between-empty-recorded.trycloudflare.com';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isRegister, setIsRegister] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
+    if (!username || !password) {
+      setError('Por favor, preencha todos os campos');
+      return;
+    }
+
+    setLoading(true);
     setError('');
+    
     const url = isRegister ? `${BACKEND_IP}/register` : `${BACKEND_IP}/login`;
+    
     try {
+      console.log('Tentando conectar com:', url);
+      
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ username, password }),
       });
+      
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
+      console.log('Resposta do servidor:', data);
+      
+      if (!res.ok) {
+        throw new Error(data.error || `Erro ${res.status}: ${res.statusText}`);
+      }
 
       if (isRegister) {
         setIsRegister(false);
-        setError('Cadastro realizado! Faça login.');
+        setError('✅ Cadastro realizado! Faça login.');
+        setUsername('');
+        setPassword('');
       } else {
         await AsyncStorage.setItem('token', data.token);
+        console.log('Token salvo:', data.token);
         onLogin(data.token);
       }
     } catch (err) {
-      console.log('Erro na requisição de login/cadastro:', err);
-      setError(err.message);
+      console.log('Erro completo:', err);
+      setError(`❌ ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Testar conexão com o backend
+  const testBackendConnection = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${BACKEND_IP}/users`);
+      if (res.ok) {
+        setError('✅ Backend conectado com sucesso!');
+      } else {
+        setError('❌ Backend respondeu com erro');
+      }
+    } catch (err) {
+      setError('❌ Não foi possível conectar ao backend');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <ImageBackground
-      source={require('../assets/images/background.png')}
+      source={require('../assets/images/background2.gif')}
       resizeMode="cover"
       style={styles.background}
     >
       <Text style={styles.title}>{isRegister ? 'Cadastro' : 'Login'}</Text>
+      
+      {/* Status da conexão */}
+      <View style={styles.connectionInfo}>
+        <Text style={styles.connectionText}>
+          Servidor: shiny-palm-tree...
+        </Text>
+        <TouchableOpacity onPress={testBackendConnection} style={styles.testButton}>
+          <Text style={styles.testButtonText}>Testar Conexão</Text>
+        </TouchableOpacity>
+      </View>
+
       <TextInput
         style={styles.input}
         placeholder="Usuário"
@@ -57,6 +109,7 @@ export default function Login({ onLogin }) {
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
+        autoCorrect={false}
       />
       <TextInput
         style={styles.input}
@@ -66,83 +119,137 @@ export default function Login({ onLogin }) {
         onChangeText={setPassword}
         secureTextEntry
       />
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>{isRegister ? 'Cadastrar' : 'Entrar'}</Text>
+      
+      <TouchableOpacity 
+        style={[styles.button, loading && styles.buttonDisabled]} 
+        onPress={handleSubmit}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>
+            {isRegister ? 'Cadastrar' : 'Entrar'}
+          </Text>
+        )}
       </TouchableOpacity>
+      
       <TouchableOpacity
         style={styles.switchButton}
-        onPress={() => setIsRegister(!isRegister)}
+        onPress={() => {
+          setIsRegister(!isRegister);
+          setError('');
+        }}
+        disabled={loading}
       >
         <Text style={styles.switchButtonText}>
           {isRegister ? 'Já tenho conta' : 'Quero me cadastrar'}
         </Text>
       </TouchableOpacity>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      
+      {error ? (
+        <Text style={[styles.error, error.includes('✅') && styles.success]}>
+          {error}
+        </Text>
+      ) : null}
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
-  },
   background: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  connectionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 12,
+    borderRadius: 8,
+    width: '80%',
+  },
+  connectionText: {
+    color: '#ffb300',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  testButton: {
+    backgroundColor: '#425296',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 30,
     textAlign: 'center',
     color: '#fff',
-    fontFamily: 'Lobs-Bold',
   },
   input: {
     width: '80%',
-    height: 40,
-    borderBottomWidth: 1,
-    borderBottomColor: '#fff',
-    marginBottom: 10,
-    paddingHorizontal: 10,
-    fontFamily: 'Lobs',
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#fff',
+    borderRadius: 8,
+    marginBottom: 15,
+    paddingHorizontal: 15,
     color: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    fontSize: 16,
   },
   button: {
-    backgroundColor: '#425296ff',
-    paddingVertical: 10,
-    borderRadius: 4,
-    marginBottom: 10,
+    backgroundColor: '#425296',
+    paddingVertical: 15,
+    borderRadius: 8,
+    marginBottom: 15,
     width: '80%',
+    alignItems: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: '#666',
   },
   buttonText: {
     color: '#fff',
     textAlign: 'center',
-    fontFamily: 'Lobs-Bold',
     fontWeight: 'bold',
+    fontSize: 16,
   },
   switchButton: {
-    backgroundColor: '#eee',
-    paddingVertical: 10,
-    borderRadius: 4,
-    marginBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 15,
     width: '80%',
   },
   switchButtonText: {
-    color: '#007bff',
+    color: '#425296',
     textAlign: 'center',
-    fontFamily: 'Lobs',
     fontWeight: 'bold',
+    fontSize: 14,
   },
   error: {
-    color: 'red',
-    marginTop: 10,
+    color: '#ff6b6b',
+    marginTop: 15,
     textAlign: 'center',
-    fontFamily: 'Lobs',
+    fontSize: 14,
+    fontWeight: 'bold',
+    padding: 10,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 8,
+    width: '80%',
+  },
+  success: {
+    color: '#51cf66',
   },
 });
