@@ -20,7 +20,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import Login from './login';
 
 // ⚠️⚠️⚠️ ATUALIZAR URL QUANDO REINICIAR O SERVIDOR ⚠️⚠️⚠️
-const BACKEND_IP = 'https://startup-browser-sms-dangerous.trycloudflare.com';
+const BACKEND_IP = 'https://cycle-ocean-dig-bobby.trycloudflare.com';
 
 // Importar todas as imagens de música necessárias
 const musicIcons = {
@@ -448,18 +448,18 @@ useEffect(() => {
 
   const getCenarioSource = (cenario) => {
     switch (cenario) {
-      case 'manha_ensolarado': return require('../assets/images/batata-doce.png');
-      case 'manha_nublado': return require('../assets/images/batata-doce.png');
-      case 'manha_chuvoso': return require('../assets/images/batata-doce.png');
-      case 'tarde_ensolarado': return require('../assets/images/batata-doce.png');
-      case 'tarde_nublado': return require('../assets/images/batata-doce.png');
-      case 'tarde_chuvoso': return require('../assets/images/batata-doce.png');
-      case 'entardecer_ensolarado': return require('../assets/images/batata-doce.png');
-      case 'entardecer_nublado': return require('../assets/images/batata-doce.png');
-      case 'noite_ensolarado': return require('../assets/images/batata-doce.png');
-      case 'noite_nublado': return require('../assets/images/batata-doce.png');
-      case 'noite_chuvoso': return require('../assets/images/batata-doce.png');
-      default: return require('../assets/images/batata-doce.png');
+      case 'manha_ensolarado': return require('../assets/images/background2.gif');
+      case 'manha_nublado': return require('../assets/images/background2.gif');
+      case 'manha_chuvoso': return require('../assets/images/background2.gif');
+      case 'tarde_ensolarado': return require('../assets/images/background2.gif');
+      case 'tarde_nublado': return require('../assets/images/background2.gif');
+      case 'tarde_chuvoso': return require('../assets/images/background2.gif');
+      case 'entardecer_ensolarado': return require('../assets/images/background2.gif');
+      case 'entardecer_nublado': return require('../assets/images/background2.gif');
+      case 'noite_ensolarado': return require('../assets/images/background2.gif');
+      case 'noite_nublado': return require('../assets/images/background2.gif');
+      case 'noite_chuvoso': return require('../assets/images/background2.gif');
+      default: return require('../assets/images/background2.gif');
     }
   };
 
@@ -554,6 +554,11 @@ useEffect(() => {
   };
 
   const playMusica = async (musica) => {
+  console.log('🎵 ===== TOCANDO MÚSICA =====');
+  console.log('📝 Nome:', musica.nome);
+  console.log('🔗 Caminho no BD:', musica.caminho);
+  console.log('🏷️ Tipo:', musica.pre_definida ? 'Pré-definida' : 'Usuário');
+  
   if (loading) return;
   
   setLoading(true);
@@ -563,9 +568,11 @@ useEffect(() => {
     if (tocando) {
       await sound.pauseAsync();
       setTocando(false);
+      console.log('⏸️ Música pausada');
     } else {
       await sound.playAsync();
       setTocando(true);
+      console.log('▶️ Música retomada');
     }
     setLoading(false);
     return;
@@ -576,11 +583,28 @@ useEffect(() => {
     await sound.stopAsync();
     await sound.unloadAsync();
     setSound(null);
+    console.log('🛑 Música anterior parada');
   }
 
   try {
-    // ✅✅✅ AGORA USA SEMPRE O CAMINHO REAL DA MÚSICA ✅✅✅
-    let uri = musica.caminho;
+    let source;
+    
+    // ✅ SISTEMA INTELIGENTE DE CARREGAMENTO
+    if (musica.caminho === 'local_bathroom') {
+      console.log('🔄 Carregando bathroom.mp3 local...');
+      source = require('../assets/audio/bathroom.mp3');
+      console.log('✅ bathroom.mp3 carregado via require');
+    } else if (musica.caminho.startsWith('http')) {
+      // Para URLs web
+      console.log('🌐 Carregando URL web:', musica.caminho);
+      source = { uri: musica.caminho };
+    } else {
+      // Para outros casos (como músicas do usuário)
+      console.log('📁 Carregando caminho padrão:', musica.caminho);
+      source = { uri: musica.caminho };
+    }
+    
+    console.log('🎯 Source final:', source ? 'Carregado' : 'Nulo');
 
     // Configuração de áudio
     await Audio.setAudioModeAsync({
@@ -589,10 +613,17 @@ useEffect(() => {
       shouldDuckAndroid: true,
     });
 
+    console.log('▶️ Criando instância de áudio...');
+    
     const { sound: newSound } = await Audio.Sound.createAsync(
-      { uri },
-      { shouldPlay: true }
+      source,
+      { 
+        shouldPlay: true,
+        isLooping: false
+      }
     );
+    
+    console.log('✅ Áudio criado e tocando!');
     
     setSound(newSound);
     setMusicaAtual(musica);
@@ -602,6 +633,7 @@ useEffect(() => {
     // Evento quando a música terminar
     newSound.setOnPlaybackStatusUpdate((status) => {
       if (status.didJustFinish) {
+        console.log('🏁 Música terminou naturalmente');
         setTocando(false);
         setMusicaAtual(null);
         setShowPlayerMini(false);
@@ -609,8 +641,8 @@ useEffect(() => {
     });
     
   } catch (e) {
-    console.log('Erro ao tocar música:', e);
-    alert('Erro ao tentar tocar a música. Verifique a conexão.');
+    console.log('❌ Erro ao tocar música:', e);
+    alert('Erro ao tentar tocar a música: ' + e.message);
   }
   setLoading(false);
 };

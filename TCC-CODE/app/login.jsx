@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_IP = 'https://startup-browser-sms-dangerous.trycloudflare.com';
+const BACKEND_IP = 'https://cycle-ocean-dig-bobby.trycloudflare.comj';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');

@@ -9,7 +9,7 @@ const db = new sqlite3.Database('./db.sqlite');
 const SECRET = 'tcc_secret_key';
 
 app.use(cors({
-  origin: 'https://startup-browser-sms-dangerous.trycloudflare.com',
+  origin: 'https://cycle-ocean-dig-bobby.trycloudflare.com',
   credentials: true
 }));
 
@@ -44,10 +44,9 @@ const atualizarMusicasPreDefinidas = () => {
       artista: 'Montell Fish', 
       duracao: '2:30', 
       pre_definida: 1,
-      caminho: '../assets/audio/bathroom.mp3' // Ou URL externa real
+      caminho: 'local_bathroom' // ✅ IDENTIFICADOR PARA ÁUDIO LOCAL
     }
   ];
-
 
   console.log('🔄 Atualizando músicas pré-definidas...');
 
@@ -71,7 +70,7 @@ const atualizarMusicasPreDefinidas = () => {
               if (err) {
                 console.log('❌ Erro ao adicionar música', musica.nome, ':', err);
               } else {
-                console.log('✅ Música adicionada:', musica.nome);
+                console.log('✅ Música adicionada:', musica.nome, '- Tipo:', musica.caminho);
               }
             }
           );
