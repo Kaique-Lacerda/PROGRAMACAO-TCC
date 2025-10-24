@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Font from 'expo-font';
 
-const BACKEND_IP = 'https://cycle-ocean-dig-bobby.trycloudflare.comj';
+// ✅ URL do backend
+const BACKEND_IP = 'https://cycle-ocean-dig-bobby.trycloudflare.com';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -10,6 +12,18 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('');
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  // Carregar fontes
+  useEffect(() => {
+    async function loadFonts() {
+      await Font.loadAsync({
+        'Lobster-Regular': require('../assets/fonts/Lobster-Regular.ttf'),
+      });
+      setFontsLoaded(true);
+    }
+    loadFonts();
+  }, []);
 
   const handleSubmit = async () => {
     if (!username || !password) {
@@ -23,8 +37,6 @@ export default function Login({ onLogin }) {
     const url = isRegister ? `${BACKEND_IP}/register` : `${BACKEND_IP}/login`;
     
     try {
-      console.log('Tentando conectar com:', url);
-      
       const res = await fetch(url, {
         method: 'POST',
         headers: { 
@@ -35,7 +47,6 @@ export default function Login({ onLogin }) {
       });
       
       const data = await res.json();
-      console.log('Resposta do servidor:', data);
       
       if (!res.ok) {
         throw new Error(data.error || `Erro ${res.status}: ${res.statusText}`);
@@ -48,33 +59,29 @@ export default function Login({ onLogin }) {
         setPassword('');
       } else {
         await AsyncStorage.setItem('token', data.token);
-        console.log('Token salvo:', data.token);
         onLogin(data.token);
       }
     } catch (err) {
-      console.log('Erro completo:', err);
       setError(`❌ ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Testar conexão com o backend
-  const testBackendConnection = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${BACKEND_IP}/users`);
-      if (res.ok) {
-        setError('✅ Backend conectado com sucesso!');
-      } else {
-        setError('❌ Backend respondeu com erro');
-      }
-    } catch (err) {
-      setError('❌ Não foi possível conectar ao backend');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!fontsLoaded) {
+    return (
+      <ImageBackground
+        source={require('../assets/images/background2.gif')}
+        resizeMode="cover"
+        style={styles.background}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ffb300" />
+          <Text style={styles.loadingText}>Carregando...</Text>
+        </View>
+      </ImageBackground>
+    );
+  }
 
   return (
     <ImageBackground
@@ -82,16 +89,11 @@ export default function Login({ onLogin }) {
       resizeMode="cover"
       style={styles.background}
     >
-      <Text style={styles.title}>{isRegister ? 'Cadastro' : 'Login'}</Text>
       
-      {/* Status da conexão */}
-      <View style={styles.connectionInfo}>
-        <Text style={styles.connectionText}>
-        </Text>
-        <TouchableOpacity onPress={testBackendConnection} style={styles.testButton}>
-          <Text style={styles.testButtonText}>Testar Conexão</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Título com Fonte Lobster */}
+      <Text style={styles.title}>
+        {isRegister ? 'Cadastro' : 'Login'}
+      </Text>
 
       <TextInput
         style={styles.input}
@@ -154,38 +156,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
-  connectionInfo: {
-    flexDirection: 'row',
+  loadingContainer: {
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 12,
-    borderRadius: 8,
-    width: '80%',
   },
-  connectionText: {
-    color: '#ffb300',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  testButton: {
-    backgroundColor: '#425296',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-  },
-  testButtonText: {
+  loadingText: {
     color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
+    marginTop: 10,
+    fontSize: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 30,
+    fontSize: 42,
+    fontFamily: 'Lobster-Regular',
+    marginBottom: 40,
     textAlign: 'center',
-    color: '#fff',
+    color: '#ffb300',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 5,
   },
   input: {
     width: '80%',
@@ -230,7 +218,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   error: {
-    color: '#ff6b6b',
+    color: '#ff6c6cff',
     marginTop: 15,
     textAlign: 'center',
     fontSize: 14,

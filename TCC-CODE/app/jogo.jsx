@@ -269,6 +269,9 @@ function Jogo() {
   const [showMusicInterface, setShowMusicInterface] = useState(false);
   const [musicLoading, setMusicLoading] = useState(false);
 
+  // === NOVO ESTADO PARA O MENU DO USUÁRIO ===
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
   // === USEEFFECTS ===
 
   useEffect(() => {
@@ -448,18 +451,18 @@ useEffect(() => {
 
   const getCenarioSource = (cenario) => {
     switch (cenario) {
-      case 'manha_ensolarado': return require('../assets/images/background2.gif');
-      case 'manha_nublado': return require('../assets/images/background2.gif');
-      case 'manha_chuvoso': return require('../assets/images/background2.gif');
-      case 'tarde_ensolarado': return require('../assets/images/background2.gif');
-      case 'tarde_nublado': return require('../assets/images/background2.gif');
-      case 'tarde_chuvoso': return require('../assets/images/background2.gif');
-      case 'entardecer_ensolarado': return require('../assets/images/background2.gif');
-      case 'entardecer_nublado': return require('../assets/images/background2.gif');
-      case 'noite_ensolarado': return require('../assets/images/background2.gif');
-      case 'noite_nublado': return require('../assets/images/background2.gif');
-      case 'noite_chuvoso': return require('../assets/images/background2.gif');
-      default: return require('../assets/images/background2.gif');
+      case 'manha_ensolarado': return require('../assets/images/wallpaper.jpg');
+      case 'manha_nublado': return require('../assets/images/wallpaper.jpg');
+      case 'manha_chuvoso': return require('../assets/images/wallpaper.jpg');
+      case 'tarde_ensolarado': return require('../assets/images/wallpaper.jpg');
+      case 'tarde_nublado': return require('../assets/images/wallpaper.jpg');
+      case 'tarde_chuvoso': return require('../assets/images/wallpaper.jpg');
+      case 'entardecer_ensolarado': return require('../assets/images/wallpaper.jpg');
+      case 'entardecer_nublado': return require('../assets/images/wallpaper.jpg');
+      case 'noite_ensolarado': return require('../assets/images/wallpaper.jpg');
+      case 'noite_nublado': return require('../assets/images/wallpaper.jpg');
+      case 'noite_chuvoso': return require('../assets/images/wallpaper.jpg');
+      default: return require('../assets/images/wallpaper.jpg');
     }
   };
 
@@ -902,14 +905,65 @@ useEffect(() => {
         </Text>
       </View>
 
-      {/* Botão de logout */}
-      <TouchableOpacity
-        style={styles.logoutBtn}
-        onPress={handleLogout}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.logoutText}>Sair</Text>
-      </TouchableOpacity>
+      {/* Menu do Usuário (SUBSTITUIU O BOTÃO SAIR) */}
+      <View style={styles.userMenuContainer}>
+        <TouchableOpacity
+          style={styles.userMenuButton}
+          onPress={() => setShowUserMenu(!showUserMenu)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.userMenuIcon}>👤</Text>
+        </TouchableOpacity>
+
+        {/* Dropdown Menu */}
+        {showUserMenu && (
+          <View style={styles.dropdownMenu}>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => {
+                setShowUserMenu(false);
+                router.push('/perfil');
+              }}
+            >
+              <Text style={styles.menuIcon}>👤</Text>
+              <Text style={styles.menuText}>Perfil</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => {
+                setShowUserMenu(false);
+                router.push('/perfil?tab=configuracoes');
+              }}
+            >
+              <Text style={styles.menuIcon}>⚙️</Text>
+              <Text style={styles.menuText}>Configurações</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.menuDivider} />
+            
+            <TouchableOpacity 
+              style={[styles.menuItem, styles.menuItemDanger]}
+              onPress={() => {
+                setShowUserMenu(false);
+                handleLogout();
+              }}
+            >
+              <Text style={styles.menuIcon}>🚪</Text>
+              <Text style={[styles.menuText, styles.menuTextDanger]}>Sair</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Overlay para fechar menu ao clicar fora */}
+      {showUserMenu && (
+        <TouchableOpacity 
+          style={styles.menuOverlay}
+          onPress={() => setShowUserMenu(false)}
+          activeOpacity={1}
+        />
+      )}
 
       {/* Menu hamburger */}
       <TouchableOpacity style={styles.hamburger} activeOpacity={0.5}>
@@ -1003,7 +1057,7 @@ useEffect(() => {
   );
 }
 
-// ESTILOS COMPLETOS
+// ESTILOS COMPLETOS (ATUALIZADOS)
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
@@ -1027,20 +1081,77 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   container: { flex: 1 },
-  logoutBtn: {
+  // NOVOS ESTILOS DO MENU DO USUÁRIO
+  userMenuContainer: {
     position: 'absolute',
     top: 32,
     right: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    zIndex: 20,
+    zIndex: 100,
   },
-  logoutText: {
-    color: '#ffb300',
-    fontWeight: 'bold',
+  userMenuButton: {
+    width: 44,
+    height: 44,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,179,0,0.3)',
+  },
+  userMenuIcon: {
+    fontSize: 20,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 50,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 160,
+    borderWidth: 1,
+    borderColor: '#ffb300',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  menuItemDanger: {
+    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+  },
+  menuIcon: {
     fontSize: 16,
+    marginRight: 12,
+    width: 20,
+  },
+  menuText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  menuTextDanger: {
+    color: '#dc3545',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginVertical: 4,
+  },
+  menuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 99,
   },
   hamburger: {
     position: 'absolute',

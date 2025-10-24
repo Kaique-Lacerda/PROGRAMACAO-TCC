@@ -7,6 +7,8 @@ node index.js
 cd TCC-CODE
 npx expo start --tunnel
 
+1080x2400
+
 Olá👋! Seja bem-vindo, ao meu código do tcc!
 
 Ultima atualização🆕:
