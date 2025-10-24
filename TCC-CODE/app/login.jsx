@@ -1,16 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ImageBackground,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_IP = 'https://fair-between-empty-recorded.trycloudflare.com';
+const BACKEND_IP = 'https://startup-browser-sms-dangerous.trycloudflare.com';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -95,7 +87,6 @@ export default function Login({ onLogin }) {
       {/* Status da conexão */}
       <View style={styles.connectionInfo}>
         <Text style={styles.connectionText}>
-          Servidor: shiny-palm-tree...
         </Text>
         <TouchableOpacity onPress={testBackendConnection} style={styles.testButton}>
           <Text style={styles.testButtonText}>Testar Conexão</Text>

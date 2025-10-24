@@ -8,21 +8,14 @@ const app = express();
 const db = new sqlite3.Database('./db.sqlite');
 const SECRET = 'tcc_secret_key';
 
-// CORS configurado para o Codespace
 app.use(cors({
-  origin: [
-    'https://shiny-palm-tree-q777475466ww2v5g.github.dev',
-    'https://*.github.dev',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'exp://*'
-  ],
+  origin: 'https://startup-browser-sms-dangerous.trycloudflare.com',
   credentials: true
 }));
 
 app.use(express.json());
 
-// Criação das tabelas
+// Criação das tabelas ATUALIZADA
 const createTables = () => {
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,10 +27,64 @@ const createTables = () => {
     user_id INTEGER,
     nome TEXT,
     caminho TEXT,
+    favorita BOOLEAN DEFAULT 0,
+    pre_definida BOOLEAN DEFAULT 0,
+    artista TEXT DEFAULT 'Desconhecido',
+    duracao TEXT DEFAULT '0:00',
     FOREIGN KEY(user_id) REFERENCES users(id)
   )`);
 };
 createTables();
+
+// 🎵 SISTEMA INTELIGENTE DE MÚSICAS PRÉ-DEFINIDAS
+const atualizarMusicasPreDefinidas = () => {
+  const musicasPreDefinidas = [
+    { 
+      nome: 'Bathroom', 
+      artista: 'Montell Fish', 
+      duracao: '2:30', 
+      pre_definida: 1,
+      caminho: '../assets/audio/bathroom.mp3' // Ou URL externa real
+    }
+  ];
+
+
+  console.log('🔄 Atualizando músicas pré-definidas...');
+
+  musicasPreDefinidas.forEach(musica => {
+    // Verifica se a música já existe
+    db.get(
+      'SELECT id FROM musicas WHERE nome = ? AND pre_definida = 1',
+      [musica.nome],
+      (err, row) => {
+        if (err) {
+          console.log('❌ Erro ao verificar música', musica.nome, ':', err);
+          return;
+        }
+        
+        if (!row) {
+          // Música não existe, adiciona para TODOS os usuários (user_id = NULL)
+          db.run(
+            'INSERT INTO musicas (user_id, nome, caminho, artista, duracao, pre_definida) VALUES (NULL, ?, ?, ?, ?, ?)',
+            [musica.nome, musica.caminho, musica.artista, musica.duracao, musica.pre_definida],
+            function(err) {
+              if (err) {
+                console.log('❌ Erro ao adicionar música', musica.nome, ':', err);
+              } else {
+                console.log('✅ Música adicionada:', musica.nome);
+              }
+            }
+          );
+        } else {
+          console.log('⚠️ Música já existe:', musica.nome);
+        }
+      }
+    );
+  });
+};
+
+// Executa a atualização quando o servidor inicia
+setTimeout(atualizarMusicasPreDefinidas, 1000);
 
 // Rota de teste
 app.get('/', (req, res) => {
@@ -51,11 +98,13 @@ app.get('/', (req, res) => {
 app.post('/register', (req, res) => {
   const { username, password } = req.body;
   const hash = bcrypt.hashSync(password, 8);
+  
   db.run(
     'INSERT INTO users (username, password) VALUES (?, ?)',
     [username, hash],
     function (err) {
       if (err) return res.status(400).json({ error: 'Usuário já existe.' });
+      
       res.json({ id: this.lastID, username });
     }
   );
@@ -86,25 +135,81 @@ function auth(req, res, next) {
   }
 }
 
+// Buscar todas as músicas do usuário (organizadas)
+app.get('/musicas', auth, (req, res) => {
+  console.log('🎵 Buscando músicas para usuário:', req.user.id);
+  
+  // Busca músicas pré-definidas (user_id NULL) + do usuário
+  const query = `
+    SELECT * FROM musicas 
+    WHERE user_id IS NULL OR user_id = ?
+    ORDER BY pre_definida DESC, favorita DESC, nome ASC
+  `;
+  
+  db.all(query, [req.user.id], (err, rows) => {
+    if (err) {
+      console.error('❌ Erro ao buscar músicas:', err);
+      return res.status(500).json({ error: 'Erro ao buscar músicas.' });
+    }
+    
+    console.log('✅ Músicas encontradas:', rows.length);
+    
+    // Organizar em categorias
+    const musicasOrganizadas = {
+      preDefinidas: rows.filter(m => m.pre_definida === 1),
+      userMusicas: rows.filter(m => m.pre_definida === 0),
+      favoritas: rows.filter(m => m.favorita === 1)
+    };
+    
+    res.json(musicasOrganizadas);
+  });
+});
+
 // Salvar música do usuário logado
 app.post('/musicas', auth, (req, res) => {
-  const { nome, caminho } = req.body;
+  const { nome, caminho, artista = 'Desconhecido', duracao = '0:00' } = req.body;
   db.run(
-    'INSERT INTO musicas (user_id, nome, caminho) VALUES (?, ?, ?)',
-    [req.user.id, nome, caminho],
+    'INSERT INTO musicas (user_id, nome, caminho, artista, duracao, pre_definida) VALUES (?, ?, ?, ?, ?, 0)',
+    [req.user.id, nome, caminho, artista, duracao],
     function (err) {
       if (err) return res.status(500).json({ error: 'Erro ao salvar música.' });
-      res.json({ id: this.lastID, nome, caminho });
+      res.json({ 
+        id: this.lastID, 
+        nome, 
+        caminho, 
+        artista, 
+        duracao,
+        pre_definida: 0,
+        favorita: 0
+      });
     }
   );
 });
 
-// Listar músicas do usuário logado
-app.get('/musicas', auth, (req, res) => {
-  db.all('SELECT * FROM musicas WHERE user_id = ?', [req.user.id], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Erro ao buscar músicas.' });
-    res.json(rows);
-  });
+// Toggle favorito
+app.put('/musicas/:id/favorito', auth, (req, res) => {
+  const { id } = req.params;
+  db.run(
+    'UPDATE musicas SET favorita = NOT favorita WHERE id = ? AND user_id = ?',
+    [id, req.user.id],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Erro ao favoritar.' });
+      res.json({ success: true });
+    }
+  );
+});
+
+// Deletar música do usuário (apenas as que ele adicionou)
+app.delete('/musicas/:id', auth, (req, res) => {
+  const { id } = req.params;
+  db.run(
+    'DELETE FROM musicas WHERE id = ? AND user_id = ? AND pre_definida = 0',
+    [id, req.user.id],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'Erro ao deletar música.' });
+      res.json({ success: true });
+    }
+  );
 });
 
 // Endpoint para listar todos os usuários cadastrados
@@ -115,10 +220,14 @@ app.get('/users', (req, res) => {
   });
 });
 
+// Rota para forçar atualização de músicas pré-definidas
+app.post('/atualizar-musicas', (req, res) => {
+  atualizarMusicasPreDefinidas();
+  res.json({ message: 'Atualização de músicas iniciada' });
+});
+
 // Iniciar servidor
 app.listen(3001, '0.0.0.0', () => {
   console.log('🚀 API rodando na porta 3001');
-  console.log('📍 URL do Codespace: https://shiny-palm-tree-q777475466ww2v5g.github.dev');
-  console.log('📝 Teste: https://shiny-palm-tree-q777475466ww2v5g.github.dev/users');
-  console.log('📝 Teste: https://shiny-palm-tree-q777475466ww2v5g.github.dev/');
+  console.log('🎵 Sistema inteligente de músicas: ✅ Ativo');
 });
