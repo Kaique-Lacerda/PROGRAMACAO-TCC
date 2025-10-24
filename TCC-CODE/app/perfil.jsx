@@ -16,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Font from 'expo-font';
 
-const BACKEND_IP = 'https://cycle-ocean-dig-bobby.trycloudflare.com';
+import { BACKEND_IP } from '../constants/config';
 
 export default function Perfil() {
   const router = useRouter();

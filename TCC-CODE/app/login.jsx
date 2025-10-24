@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Font from 'expo-font';
 
 // ✅ URL do backend
-const BACKEND_IP = 'https://cycle-ocean-dig-bobby.trycloudflare.com';
+import { BACKEND_IP } from '../constants/config';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');

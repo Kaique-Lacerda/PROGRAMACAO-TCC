@@ -20,7 +20,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import Login from './login';
 
 // ⚠️⚠️⚠️ ATUALIZAR URL QUANDO REINICIAR O SERVIDOR ⚠️⚠️⚠️
-const BACKEND_IP = 'https://cycle-ocean-dig-bobby.trycloudflare.com';
+import { BACKEND_IP } from '../constants/config';
 
 // Importar todas as imagens de música necessárias
 const musicIcons = {
