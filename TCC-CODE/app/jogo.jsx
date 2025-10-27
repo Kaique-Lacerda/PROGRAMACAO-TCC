@@ -1,8 +1,7 @@
 //IMPORTS
-import React from 'react';
+import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import { useState, useEffect, useCallback } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -309,7 +308,7 @@ function Jogo() {
           });
         }
       } catch (e) {
-        console.log('Erro ao buscar clima:', e);
+        console.log('❌', 'CLIMA', 'Erro ao buscar clima:', e);
         setClima({ temperatura: '--', icone: '--' });
       }
     }
@@ -345,81 +344,12 @@ function Jogo() {
     };
   }, [clima, cenarioAtual]);
 
-    // Buscar músicas quando logado
+  // Buscar músicas quando logado
   useEffect(() => {
     if (isLoggedIn) {
       fetchMusicas();
     }
   }, [isLoggedIn]);
-
-  // 🔍 ADICIONE AQUI O USEEFFECT DE DEBUG (nova linha)
-  // Debug da conexão
-  useEffect(() => {
-    const testarConexao = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        console.log('🔍 Testando conexão com:', BACKEND_IP);
-        console.log('🔍 Token disponível:', !!token);
-        
-        const res = await fetch(`${BACKEND_IP}/`, {
-          headers: { 
-            'Authorization': token || '',
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('🔍 Status da conexão:', res.status);
-        
-        if (res.ok) {
-          const data = await res.json();
-          console.log('✅ Conexão OK:', data);
-        } else {
-          console.log('❌ Erro na conexão:', res.status);
-        }
-      } catch (error) {
-        console.log('❌ Falha na conexão:', error.message);
-      }
-    };
-
-    if (isLoggedIn) {
-      testarConexao();
-    }
-  }, [isLoggedIn]);
-// Debug específico da rota /musicas
-useEffect(() => {
-  const testarRotaMusicas = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      console.log('🎵 TESTANDO ROTA /MUSICAS');
-      console.log('🔑 Token:', token);
-      console.log('🌐 URL:', `${BACKEND_IP}/musicas`);
-      
-      const res = await fetch(`${BACKEND_IP}/musicas`, {
-        headers: { 
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('📊 Status:', res.status);
-      console.log('📊 OK:', res.ok);
-      
-      if (res.ok) {
-        const data = await res.json();
-        console.log('✅ Dados recebidos:', data);
-      } else {
-        const errorText = await res.text();
-        console.log('❌ Erro do servidor:', errorText);
-      }
-    } catch (error) {
-      console.log('💥 Erro de rede:', error.message);
-    }
-  };
-
-  if (isLoggedIn) {
-    setTimeout(() => testarRotaMusicas(), 1000);
-  }
-}, [isLoggedIn]);
 
   // === FUNÇÕES DOS CENÁRIOS ===
 
@@ -451,18 +381,18 @@ useEffect(() => {
 
   const getCenarioSource = (cenario) => {
     switch (cenario) {
-      case 'manha_ensolarado': return require('../assets/images/wallpaper.jpg');
-      case 'manha_nublado': return require('../assets/images/wallpaper.jpg');
-      case 'manha_chuvoso': return require('../assets/images/wallpaper.jpg');
-      case 'tarde_ensolarado': return require('../assets/images/wallpaper.jpg');
-      case 'tarde_nublado': return require('../assets/images/wallpaper.jpg');
-      case 'tarde_chuvoso': return require('../assets/images/wallpaper.jpg');
-      case 'entardecer_ensolarado': return require('../assets/images/wallpaper.jpg');
-      case 'entardecer_nublado': return require('../assets/images/wallpaper.jpg');
-      case 'noite_ensolarado': return require('../assets/images/wallpaper.jpg');
-      case 'noite_nublado': return require('../assets/images/wallpaper.jpg');
-      case 'noite_chuvoso': return require('../assets/images/wallpaper.jpg');
-      default: return require('../assets/images/wallpaper.jpg');
+      case 'manha_ensolarado': return require('../assets/images/background100.png');
+      case 'manha_nublado': return require('../assets/images/background100.png');
+      case 'manha_chuvoso': return require('../assets/images/background100.png');
+      case 'tarde_ensolarado': return require('../assets/images/background100.png');
+      case 'tarde_nublado': return require('../assets/images/background100.png');
+      case 'tarde_chuvoso': return require('../assets/images/background100.png');
+      case 'entardecer_ensolarado': return require('../assets/images/background100.png');
+      case 'entardecer_nublado': return require('../assets/images/background100.png');
+      case 'noite_ensolarado': return require('../assets/images/background100.png');
+      case 'noite_nublado': return require('../assets/images/background100.png');
+      case 'noite_chuvoso': return require('../assets/images/background100.png');
+      default: return require('../assets/images/background100.png');
     }
   };
 
@@ -475,7 +405,7 @@ useEffect(() => {
         setIsLoggedIn(true);
       }
     } catch (error) {
-      console.log('Erro ao verificar autenticação:', error);
+      console.log('❌', 'AUTH', 'Erro ao verificar autenticação:', error);
     } finally {
       setCheckingAuth(false);
     }
@@ -498,19 +428,18 @@ useEffect(() => {
         setShowPlayerMini(false);
       }
     } catch (error) {
-      console.log('Erro ao fazer logout:', error);
+      console.log('❌', 'AUTH', 'Erro ao fazer logout:', error);
     }
   };
 
   // === FUNÇÕES DE MÚSICA (CORRIGIDAS) ===
 
   const fetchMusicas = async () => {
-    // evita chamadas concorrentes
     if (musicLoading) return;
     setMusicLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      console.log('Token sendo enviado para /musicas:', token);
+      console.log('🎵', 'MÚSICAS', 'Buscando músicas do servidor...');
       
       const res = await fetch(`${BACKEND_IP}/musicas`, {
         headers: { 
@@ -524,9 +453,13 @@ useEffect(() => {
       }
       
       const data = await res.json();
+      console.log('✅', 'MÚSICAS', 
+        `Encontradas: ${data.preDefinidas?.length} pré-definidas, ` +
+        `${data.userMusicas?.length} do usuário`
+      );
       setMusicas(data);
     } catch (e) {
-      console.log('Erro ao buscar músicas:', e);
+      console.log('❌', 'MÚSICAS', 'Erro ao buscar músicas:', e);
       // Carregar músicas mock para desenvolvimento
       setMusicas({
         preDefinidas: [
@@ -537,16 +470,7 @@ useEffect(() => {
             duracao: "2:30",
             favorita: false,
             pre_definida: true,
-            caminho: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
-          },
-          {
-            id: 2,
-            nome: "Som da Natureza", 
-            artista: "Sistema",
-            duracao: "3:15",
-            favorita: true,
-            pre_definida: true,
-            caminho: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
+            caminho: "local_bathroom"
           }
         ],
         userMusicas: [],
@@ -557,98 +481,104 @@ useEffect(() => {
   };
 
   const playMusica = async (musica) => {
-  console.log('🎵 ===== TOCANDO MÚSICA =====');
-  console.log('📝 Nome:', musica.nome);
-  console.log('🔗 Caminho no BD:', musica.caminho);
-  console.log('🏷️ Tipo:', musica.pre_definida ? 'Pré-definida' : 'Usuário');
-  
-  if (loading) return;
-  
-  setLoading(true);
-  
-  // Se já está tocando a mesma música, apenas pausa/despausa
-  if (musicaAtual && musicaAtual.id === musica.id && sound) {
-    if (tocando) {
-      await sound.pauseAsync();
-      setTocando(false);
-      console.log('⏸️ Música pausada');
-    } else {
-      await sound.playAsync();
+    console.log('🎵', 'PLAYER', `Tocando: ${musica.nome}`);
+    console.log('🔗', 'PLAYER', `Caminho: ${musica.caminho}`);
+    console.log('🏷️', 'PLAYER', `Tipo: ${musica.pre_definida ? 'Pré-definida' : 'Usuário'}`);
+    
+    if (loading) return;
+    
+    setLoading(true);
+    
+    // Se já está tocando a mesma música, apenas pausa/despausa
+    if (musicaAtual && musicaAtual.id === musica.id && sound) {
+      if (tocando) {
+        await sound.pauseAsync();
+        setTocando(false);
+        console.log('⏸️', 'PLAYER', 'Música pausada');
+      } else {
+        await sound.playAsync();
+        setTocando(true);
+        console.log('▶️', 'PLAYER', 'Música retomada');
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Para música atual se houver
+    if (sound) {
+      await sound.stopAsync();
+      await sound.unloadAsync();
+      setSound(null);
+      console.log('🛑', 'PLAYER', 'Música anterior parada');
+    }
+
+    try {
+      let source;
+      
+      // 🎯 SISTEMA CORRIGIDO - Mapeamento dos arquivos locais
+      const mapeamentoAudios = {
+        'local_bathroom': require('../assets/audio/bathroom.mp3'),
+        'local_eu_vou_te_comer_sorrindo': require('../assets/audio/Eu_Vou_Te_Comer_Sorrindo.mp3'),
+        'local_k_o': require('../assets/audio/K.O.mp3'),
+        'local_rainbow_all_night_long': require('../assets/audio/All_Night_Long.mp3'),
+        'local_shut_up_and_listen': require('../assets/audio/Shut_Up_and_Listen.mp3'),
+        'local_sol_loiro': require('../assets/audio/Sol_Loiro.mp3'),
+        'local_flamingos': require('../assets/audio/flamingos.mp3')
+      };
+
+      if (mapeamentoAudios[musica.caminho]) {
+        console.log('📁', 'PLAYER', `Carregando arquivo local: ${musica.caminho}`);
+        source = mapeamentoAudios[musica.caminho];
+      } else if (musica.caminho.startsWith('http')) {
+        console.log('🌐', 'PLAYER', `Carregando URL web: ${musica.caminho}`);
+        source = { uri: musica.caminho };
+      } else {
+        console.log('❌', 'PLAYER', `Caminho não reconhecido: ${musica.caminho}`);
+        throw new Error(`Tipo de áudio não suportado: ${musica.caminho}`);
+      }
+      
+      console.log('✅', 'PLAYER', 'Source configurado corretamente');
+
+      // Configuração de áudio
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: true,
+      });
+
+      console.log('▶️', 'PLAYER', 'Criando instância de áudio...');
+      
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        source,
+        { 
+          shouldPlay: true,
+          isLooping: false
+        }
+      );
+      
+      console.log('✅', 'PLAYER', 'Áudio criado e tocando!');
+      
+      setSound(newSound);
+      setMusicaAtual(musica);
       setTocando(true);
-      console.log('▶️ Música retomada');
+      setShowPlayerMini(true);
+      
+      // Evento quando a música terminar
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          console.log('🏁', 'PLAYER', 'Música terminou naturalmente');
+          setTocando(false);
+          setMusicaAtual(null);
+          setShowPlayerMini(false);
+        }
+      });
+      
+    } catch (e) {
+      console.log('❌', 'PLAYER', `Erro ao tocar música: ${e.message}`);
+      alert('Erro ao tentar tocar a música: ' + e.message);
     }
     setLoading(false);
-    return;
-  }
-
-  // Para música atual se houver
-  if (sound) {
-    await sound.stopAsync();
-    await sound.unloadAsync();
-    setSound(null);
-    console.log('🛑 Música anterior parada');
-  }
-
-  try {
-    let source;
-    
-    // ✅ SISTEMA INTELIGENTE DE CARREGAMENTO
-    if (musica.caminho === 'local_bathroom') {
-      console.log('🔄 Carregando bathroom.mp3 local...');
-      source = require('../assets/audio/bathroom.mp3');
-      console.log('✅ bathroom.mp3 carregado via require');
-    } else if (musica.caminho.startsWith('http')) {
-      // Para URLs web
-      console.log('🌐 Carregando URL web:', musica.caminho);
-      source = { uri: musica.caminho };
-    } else {
-      // Para outros casos (como músicas do usuário)
-      console.log('📁 Carregando caminho padrão:', musica.caminho);
-      source = { uri: musica.caminho };
-    }
-    
-    console.log('🎯 Source final:', source ? 'Carregado' : 'Nulo');
-
-    // Configuração de áudio
-    await Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-      shouldDuckAndroid: true,
-    });
-
-    console.log('▶️ Criando instância de áudio...');
-    
-    const { sound: newSound } = await Audio.Sound.createAsync(
-      source,
-      { 
-        shouldPlay: true,
-        isLooping: false
-      }
-    );
-    
-    console.log('✅ Áudio criado e tocando!');
-    
-    setSound(newSound);
-    setMusicaAtual(musica);
-    setTocando(true);
-    setShowPlayerMini(true);
-    
-    // Evento quando a música terminar
-    newSound.setOnPlaybackStatusUpdate((status) => {
-      if (status.didJustFinish) {
-        console.log('🏁 Música terminou naturalmente');
-        setTocando(false);
-        setMusicaAtual(null);
-        setShowPlayerMini(false);
-      }
-    });
-    
-  } catch (e) {
-    console.log('❌ Erro ao tocar música:', e);
-    alert('Erro ao tentar tocar a música: ' + e.message);
-  }
-  setLoading(false);
-};
+  };
 
   const handlePlayPause = async () => {
     if (!sound || !musicaAtual) return;
@@ -657,12 +587,14 @@ useEffect(() => {
       if (tocando) {
         await sound.pauseAsync();
         setTocando(false);
+        console.log('⏸️', 'PLAYER', 'Música pausada');
       } else {
         await sound.playAsync();
         setTocando(true);
+        console.log('▶️', 'PLAYER', 'Música retomada');
       }
     } catch (e) {
-      console.log('Erro ao pausar/retomar:', e);
+      console.log('❌', 'PLAYER', 'Erro ao pausar/retomar:', e);
     }
   };
 
@@ -671,8 +603,9 @@ useEffect(() => {
       try {
         await sound.stopAsync();
         await sound.unloadAsync();
+        console.log('🛑', 'PLAYER', 'Música parada');
       } catch (e) {
-        console.log('Erro ao parar música:', e);
+        console.log('❌', 'PLAYER', 'Erro ao parar música:', e);
       }
       setSound(null);
       setTocando(false);
@@ -703,9 +636,10 @@ useEffect(() => {
           userMusicas: atualizarMusica(prev.userMusicas),
           favoritas: prev.favoritas.filter(m => m.id !== musicaId)
         }));
+        console.log('⭐', 'MÚSICAS', `Favorito alternado para música ID: ${musicaId}`);
       }
     } catch (e) {
-      console.log('Erro ao favoritar:', e);
+      console.log('❌', 'MÚSICAS', 'Erro ao favoritar:', e);
       // Atualização local em caso de erro de rede
       const atualizarMusica = (lista) => lista.map(m => 
         m.id === musicaId ? { ...m, favorita: !m.favorita } : m
@@ -741,9 +675,10 @@ useEffect(() => {
         if (musicaAtual && musicaAtual.id === musicaId) {
           await stopMusica();
         }
+        console.log('🗑️', 'MÚSICAS', `Música deletada ID: ${musicaId}`);
       }
     } catch (e) {
-      console.log('Erro ao deletar música:', e);
+      console.log('❌', 'MÚSICAS', 'Erro ao deletar música:', e);
       // Remove localmente em caso de erro
       setMusicas(prev => ({
         ...prev,
@@ -752,81 +687,75 @@ useEffect(() => {
     }
   };
 
- const handleAddLocalMusic = async () => {
-  try {
-    console.log('Iniciando seleção de música...');
-    const result = await DocumentPicker.getDocumentAsync({ 
-      type: 'audio/*',
-      copyToCacheDirectory: true
-    });
-    
-    console.log('Resultado do DocumentPicker:', result);
-    
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const track = result.assets[0];
-      console.log('Música selecionada:', track.name, 'URI:', track.uri);
+  const handleAddLocalMusic = async () => {
+    try {
+      console.log('📁', 'MÚSICAS', 'Iniciando seleção de arquivo...');
+      const result = await DocumentPicker.getDocumentAsync({ 
+        type: 'audio/*',
+        copyToCacheDirectory: true
+      });
       
-      // Tenta salvar no backend primeiro
-      try {
-        const token = await AsyncStorage.getItem('token');
-        console.log('Token encontrado:', !!token);
+      console.log('📦', 'MÚSICAS', 'Resultado do DocumentPicker:', result);
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const track = result.assets[0];
+        console.log('✅', 'MÚSICAS', `Arquivo selecionado: ${track.name}`);
         
-        console.log('Tentando conectar com:', `${BACKEND_IP}/musicas`);
-        
-        const res = await fetch(`${BACKEND_IP}/musicas`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token || ''
-          },
-          body: JSON.stringify({ 
+        // Tenta salvar no backend primeiro
+        try {
+          const token = await AsyncStorage.getItem('token');
+          
+          const res = await fetch(`${BACKEND_IP}/musicas`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': token || ''
+            },
+            body: JSON.stringify({ 
+              nome: track.name || 'Música Local',
+              caminho: track.uri,
+              artista: 'Arquivo Local',
+              duracao: '0:00'
+            })
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            console.log('✅', 'MÚSICAS', `Música salva no servidor: ${data.nome}`);
+            await fetchMusicas();
+            alert('Música adicionada com sucesso!');
+          } else {
+            throw new Error(`Erro do servidor: ${res.status}`);
+          }
+        } catch (networkError) {
+          console.log('❌', 'MÚSICAS', 'Erro de rede, salvando localmente:', networkError);
+          
+          // Adiciona localmente em caso de erro de rede
+          const novaMusica = {
+            id: Date.now(),
             nome: track.name || 'Música Local',
             caminho: track.uri,
             artista: 'Arquivo Local',
-            duracao: '0:00'
-          })
-        });
-        
-        console.log('Resposta do servidor status:', res.status);
-        
-        if (res.ok) {
-          const data = await res.json();
-          console.log('Música salva no servidor:', data);
-          await fetchMusicas();
-          alert('Música adicionada com sucesso!');
-        } else {
-          console.log('Erro na resposta do servidor:', res.status);
-          throw new Error(`Erro do servidor: ${res.status}`);
+            duracao: '0:00',
+            favorita: false,
+            pre_definida: false
+          };
+          
+          setMusicas(prev => ({
+            ...prev,
+            userMusicas: [...prev.userMusicas, novaMusica]
+          }));
+          
+          alert('Música adicionada localmente (sem conexão com o servidor)');
         }
-      } catch (networkError) {
-        console.log('Erro de rede ao salvar música, salvando localmente:', networkError);
-        
-        // Adiciona localmente em caso de erro de rede
-        const novaMusica = {
-          id: Date.now(),
-          nome: track.name || 'Música Local',
-          caminho: track.uri,
-          artista: 'Arquivo Local',
-          duracao: '0:00',
-          favorita: false,
-          pre_definida: false
-        };
-        
-        setMusicas(prev => ({
-          ...prev,
-          userMusicas: [...prev.userMusicas, novaMusica]
-        }));
-        
-        alert('Música adicionada localmente (sem conexão com o servidor)');
+      } else {
+        console.log('ℹ️', 'MÚSICAS', 'Seleção de música cancelada');
       }
-    } else {
-      console.log('Seleção de música cancelada');
+    } catch (e) {
+      console.log('❌', 'MÚSICAS', 'Erro geral ao selecionar música:', e);
+      alert('Erro ao selecionar música. Tente novamente.');
     }
-  } catch (e) {
-    console.log('Erro geral ao selecionar música:', e);
-    alert('Erro ao selecionar música. Tente novamente.');
-  }
-};
+  };
 
   // === COMPONENTES DE MÚSICA ===
 
@@ -905,7 +834,7 @@ useEffect(() => {
         </Text>
       </View>
 
-      {/* Menu do Usuário (SUBSTITUIU O BOTÃO SAIR) */}
+      {/* Menu do Usuário */}
       <View style={styles.userMenuContainer}>
         <TouchableOpacity
           style={styles.userMenuButton}
@@ -991,12 +920,12 @@ useEffect(() => {
           </View>
         </View>
 
-        {/* Botão Abrir Música - VERSÃO SIMPLES */}
+        {/* Botão Abrir Música */}
         <TouchableOpacity
           style={styles.musicToggleHitbox}
           activeOpacity={0.8}
           onPress={() => {
-            console.log('Botão música clicado');
+            console.log('🎵', 'MÚSICAS', 'Abrindo interface de músicas');
             setShowMusicInterface(true);
           }}
         >
@@ -1057,7 +986,7 @@ useEffect(() => {
   );
 }
 
-// ESTILOS COMPLETOS (ATUALIZADOS)
+// ESTILOS COMPLETOS (MANTIDOS)
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
@@ -1081,7 +1010,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   container: { flex: 1 },
-  // NOVOS ESTILOS DO MENU DO USUÁRIO
   userMenuContainer: {
     position: 'absolute',
     top: 32,
