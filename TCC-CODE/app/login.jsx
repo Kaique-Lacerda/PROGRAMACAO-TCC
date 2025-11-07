@@ -7,7 +7,8 @@ import * as Font from 'expo-font';
 import { BACKEND_URL } from '../constants/config';
 
 export default function Login({ onLogin }) {
-  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isRegister, setIsRegister] = useState(false);
@@ -25,67 +26,76 @@ export default function Login({ onLogin }) {
     loadFonts();
   }, []);
 
- const handleSubmit = async () => {
-  if (!username || !password) {
-    setError('Por favor, preencha todos os campos');
-    return;
-  }
-
-  setLoading(true);
-  setError('');
-  
-  const url = isRegister ? `${BACKEND_URL}/auth/register` : `${BACKEND_URL}/auth/login`;
-  
-  try {
-    // ✅ CORREÇÃO: Prepara o body corretamente
-    const requestBody = isRegister 
-      ? { 
-          name: username,  // No cadastro, usa username como name
-          email: `${username}@email.com`, // Cria um email automaticamente
-          password 
-        }
-      : { 
-          email: username.includes('@') ? username : `${username}@email.com`,
-          password 
-        };
-    
-    console.log('🔗 URL:', url);
-    console.log('📦 Request Body:', requestBody);
-    
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(requestBody),
-    });
-    
-    console.log('📥 Status:', res.status);
-    
-    const data = await res.json();
-    console.log('📦 Response Data:', data);
-    
-    if (!res.ok) {
-      throw new Error(data.error || `Erro ${res.status}`);
+  const handleSubmit = async () => {
+    // Validação dos campos
+    if (!email || !password) {
+      setError('Por favor, preencha email e senha');
+      return;
     }
 
-    if (isRegister) {
-      setIsRegister(false);
-      setError('✅ Cadastro realizado! Faça login.');
-      setUsername('');
-      setPassword('');
-    } else {
-      await AsyncStorage.setItem('token', data.token);
-      onLogin(data.token);
+    if (isRegister && !name) {
+      setError('Por favor, preencha seu nome');
+      return;
     }
-  } catch (err) {
-    console.error('💥 Erro completo:', err);
-    setError(`❌ ${err.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
+
+    setLoading(true);
+    setError('');
+    
+    const url = isRegister ? `${BACKEND_URL}/auth/register` : `${BACKEND_URL}/auth/login`;
+    
+    try {
+      // ✅ Body correto para o backend
+      const requestBody = isRegister 
+        ? { name, email, password }
+        : { email, password };
+      
+      console.log('🔗 URL:', url);
+      console.log('📦 Request Body:', requestBody);
+      
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('📥 Status:', res.status);
+      
+      const data = await res.json();
+      console.log('📦 Response Data:', data);
+      
+      if (!res.ok) {
+        throw new Error(data.error || `Erro ${res.status}`);
+      }
+
+      if (isRegister) {
+        setIsRegister(false);
+        setError('✅ Cadastro realizado! Faça login.');
+        setName('');
+        setEmail('');
+        setPassword('');
+      } else {
+        await AsyncStorage.setItem('token', data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(data.user));
+        onLogin(data.token);
+      }
+    } catch (err) {
+      console.error('💥 Erro completo:', err);
+      setError(`❌ ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchMode = () => {
+    setIsRegister(!isRegister);
+    setError('');
+    setName('');
+    setEmail('');
+    setPassword('');
+  };
 
   if (!fontsLoaded) {
     return (
@@ -114,24 +124,42 @@ export default function Login({ onLogin }) {
         {isRegister ? 'Cadastro' : 'Login'}
       </Text>
 
+      {/* Campo NOME (apenas no cadastro) */}
+      {isRegister && (
+        <TextInput
+          style={styles.input}
+          placeholder="Seu nome completo"
+          placeholderTextColor="#ccc"
+          value={name}
+          onChangeText={setName}
+          autoCapitalize="words"
+          autoCorrect={false}
+        />
+      )}
+
+      {/* Campo EMAIL (sempre visível) */}
       <TextInput
         style={styles.input}
-        placeholder="Usuário"
+        placeholder="Seu email"
         placeholderTextColor="#ccc"
-        value={username}
-        onChangeText={setUsername}
+        value={email}
+        onChangeText={setEmail}
         autoCapitalize="none"
         autoCorrect={false}
+        keyboardType="email-address"
       />
+
+      {/* Campo SENHA (sempre visível) */}
       <TextInput
         style={styles.input}
-        placeholder="Senha"
+        placeholder="Sua senha"
         placeholderTextColor="#ccc"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
       
+      {/* Botão Principal */}
       <TouchableOpacity 
         style={[styles.button, loading && styles.buttonDisabled]} 
         onPress={handleSubmit}
@@ -146,19 +174,18 @@ export default function Login({ onLogin }) {
         )}
       </TouchableOpacity>
       
+      {/* Botão para alternar entre Login/Cadastro */}
       <TouchableOpacity
         style={styles.switchButton}
-        onPress={() => {
-          setIsRegister(!isRegister);
-          setError('');
-        }}
+        onPress={switchMode}
         disabled={loading}
       >
         <Text style={styles.switchButtonText}>
-          {isRegister ? 'Já tenho conta' : 'Quero me cadastrar'}
+          {isRegister ? 'Já tenho conta? Fazer login' : 'Não tem conta? Cadastrar'}
         </Text>
       </TouchableOpacity>
       
+      {/* Mensagem de erro/sucesso */}
       {error ? (
         <Text style={[styles.error, error.includes('✅') && styles.success]}>
           {error}
