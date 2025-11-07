@@ -25,69 +25,81 @@ export default function Login({ onLogin }) {
     }
     loadFonts();
   }, []);
+  
+const handleSubmit = async () => {
+  if (!email || !password) {
+    setError('Por favor, preencha email e senha');
+    return;
+  }
 
-  const handleSubmit = async () => {
-    // Validação dos campos
-    if (!email || !password) {
-      setError('Por favor, preencha email e senha');
-      return;
-    }
+  if (isRegister && !name) {
+    setError('Por favor, preencha seu nome');
+    return;
+  }
 
-    if (isRegister && !name) {
-      setError('Por favor, preencha seu nome');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
+  setLoading(true);
+  setError('');
+  
+  const url = isRegister ? `${BACKEND_URL}/auth/register` : `${BACKEND_URL}/auth/login`;
+  
+  try {
+    const requestBody = isRegister 
+      ? { name, email, password }
+      : { email, password };
     
-    const url = isRegister ? `${BACKEND_URL}/auth/register` : `${BACKEND_URL}/auth/login`;
+    console.log('🔗 Fazendo request para:', url);
     
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(requestBody),
+    });
+    
+    console.log('📥 Response status:', res.status);
+    console.log('📥 Response ok?', res.ok);
+    
+    // Verifica se a response tem conteúdo
+    const responseText = await res.text();
+    console.log('📥 Response text:', responseText);
+    
+    let data;
     try {
-      // ✅ Body correto para o backend
-      const requestBody = isRegister 
-        ? { name, email, password }
-        : { email, password };
-      
-      console.log('🔗 URL:', url);
-      console.log('📦 Request Body:', requestBody);
-      
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(requestBody),
-      });
-      
-      console.log('📥 Status:', res.status);
-      
-      const data = await res.json();
-      console.log('📦 Response Data:', data);
-      
-      if (!res.ok) {
-        throw new Error(data.error || `Erro ${res.status}`);
-      }
-
-      if (isRegister) {
-        setIsRegister(false);
-        setError('✅ Cadastro realizado! Faça login.');
-        setName('');
-        setEmail('');
-        setPassword('');
-      } else {
-        await AsyncStorage.setItem('token', data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(data.user));
-        onLogin(data.token);
-      }
-    } catch (err) {
-      console.error('💥 Erro completo:', err);
-      setError(`❌ ${err.message}`);
-    } finally {
-      setLoading(false);
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Erro ao parsear JSON:', parseError);
+      throw new Error('Resposta inválida do servidor');
     }
-  };
+    
+    console.log('📦 Response data:', data);
+    
+    if (!res.ok) {
+      throw new Error(data.error || `Erro ${res.status}`);
+    }
+
+    if (isRegister) {
+      setIsRegister(false);
+      setError('✅ Cadastro realizado! Faça login.');
+      setName('');
+      setEmail('');
+      setPassword('');
+    } else {
+      console.log('✅ Login bem-sucedido, salvando token...');
+      await AsyncStorage.setItem('token', data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+      console.log('✅ Token salvo, chamando onLogin...');
+      onLogin(data.token);
+    }
+  } catch (err) {
+    console.error('💥 Erro completo no login:', err);
+    console.error('💥 Stack:', err.stack);
+    setError(`❌ ${err.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const switchMode = () => {
     setIsRegister(!isRegister);
