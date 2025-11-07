@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Font from 'expo-font';
 
 // ✅ URL do backend
-import { BACKEND_IP } from '../constants/config';
+import { BACKEND_URL } from '../constants/config';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -25,48 +25,67 @@ export default function Login({ onLogin }) {
     loadFonts();
   }, []);
 
-  const handleSubmit = async () => {
-    if (!username || !password) {
-      setError('Por favor, preencha todos os campos');
-      return;
+ const handleSubmit = async () => {
+  if (!username || !password) {
+    setError('Por favor, preencha todos os campos');
+    return;
+  }
+
+  setLoading(true);
+  setError('');
+  
+  const url = isRegister ? `${BACKEND_URL}/auth/register` : `${BACKEND_URL}/auth/login`;
+  
+  try {
+    // ✅ CORREÇÃO: Prepara o body corretamente
+    const requestBody = isRegister 
+      ? { 
+          name: username,  // No cadastro, usa username como name
+          email: `${username}@email.com`, // Cria um email automaticamente
+          password 
+        }
+      : { 
+          email: username.includes('@') ? username : `${username}@email.com`,
+          password 
+        };
+    
+    console.log('🔗 URL:', url);
+    console.log('📦 Request Body:', requestBody);
+    
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(requestBody),
+    });
+    
+    console.log('📥 Status:', res.status);
+    
+    const data = await res.json();
+    console.log('📦 Response Data:', data);
+    
+    if (!res.ok) {
+      throw new Error(data.error || `Erro ${res.status}`);
     }
 
-    setLoading(true);
-    setError('');
-    
-    const url = isRegister ? `${BACKEND_IP}/register` : `${BACKEND_IP}/login`;
-    
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ username, password }),
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || `Erro ${res.status}: ${res.statusText}`);
-      }
-
-      if (isRegister) {
-        setIsRegister(false);
-        setError('✅ Cadastro realizado! Faça login.');
-        setUsername('');
-        setPassword('');
-      } else {
-        await AsyncStorage.setItem('token', data.token);
-        onLogin(data.token);
-      }
-    } catch (err) {
-      setError(`❌ ${err.message}`);
-    } finally {
-      setLoading(false);
+    if (isRegister) {
+      setIsRegister(false);
+      setError('✅ Cadastro realizado! Faça login.');
+      setUsername('');
+      setPassword('');
+    } else {
+      await AsyncStorage.setItem('token', data.token);
+      onLogin(data.token);
     }
-  };
+  } catch (err) {
+    console.error('💥 Erro completo:', err);
+    setError(`❌ ${err.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (!fontsLoaded) {
     return (

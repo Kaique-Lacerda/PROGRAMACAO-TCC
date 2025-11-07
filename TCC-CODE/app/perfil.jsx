@@ -16,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Font from 'expo-font';
 
-import { BACKEND_IP } from '../constants/config';
+import { BACKEND_URL } from '../constants/config';
 
 export default function Perfil() {
   const router = useRouter();
@@ -60,7 +60,7 @@ export default function Perfil() {
       }
 
       // Buscar dados do usuário do backend
-      const res = await fetch(`${BACKEND_IP}/user/profile`, {
+      const res = await fetch(`${BACKEND_URL}/auth/me`, {
         headers: {
           'Authorization': token,
           'Content-Type': 'application/json'
@@ -99,7 +99,7 @@ export default function Perfil() {
       const token = await AsyncStorage.getItem('token');
       
       // Buscar estatísticas (você pode criar essa rota no backend depois)
-      const statsRes = await fetch(`${BACKEND_IP}/user/stats`, {
+      const statsRes = await fetch(`${BACKEND_URL}/user/stats`, {
         headers: {
           'Authorization': token,
           'Content-Type': 'application/json'
@@ -156,7 +156,7 @@ export default function Perfil() {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${BACKEND_IP}/user/profile`, {
+      const res = await fetch(`${BACKEND_URL}/auth/me`, {
         method: 'PUT',
         headers: {
           'Authorization': token,

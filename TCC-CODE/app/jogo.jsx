@@ -19,7 +19,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import Login from './login';
 
 // ⚠️⚠️⚠️ ATUALIZAR URL QUANDO REINICIAR O SERVIDOR ⚠️⚠️⚠️
-import { BACKEND_IP } from '../constants/config';
+import { BACKEND_URL } from '../constants/config';
 
 // Importar todas as imagens de música necessárias
 const musicIcons = {
@@ -441,7 +441,7 @@ function Jogo() {
       const token = await AsyncStorage.getItem('token');
       console.log('🎵', 'MÚSICAS', 'Buscando músicas do servidor...');
       
-      const res = await fetch(`${BACKEND_IP}/musicas`, {
+      const res = await fetch(`${BACKEND_URL}/musicas`, {
         headers: { 
           'Authorization': token,
           'Content-Type': 'application/json'
@@ -617,7 +617,7 @@ function Jogo() {
   const toggleFavorito = async (musicaId) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${BACKEND_IP}/musicas/${musicaId}/favorito`, {
+      const res = await fetch(`${BACKEND_URL}/musicas/${musicaId}/favorito`, {
         method: 'PUT',
         headers: { 
           'Authorization': token,
@@ -656,7 +656,7 @@ function Jogo() {
   const deletarMusica = async (musicaId) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${BACKEND_IP}/musicas/${musicaId}`, {
+      const res = await fetch(`${BACKEND_URL}/musicas/${musicaId}`, {
         method: 'DELETE',
         headers: { 
           'Authorization': token,
@@ -705,7 +705,7 @@ function Jogo() {
         try {
           const token = await AsyncStorage.getItem('token');
           
-          const res = await fetch(`${BACKEND_IP}/musicas`, {
+          const res = await fetch(`${BACKEND_URL}/musicas`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

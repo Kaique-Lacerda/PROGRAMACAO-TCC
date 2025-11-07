@@ -1,4 +1,4 @@
-// ⚠️⚠️⚠️ ATUALIZAR URL QUANDO REINICIAR O SERVIDOR ⚠️⚠️⚠️
-export const BACKEND_IP = 'https://salaries-away-establish-hair.trycloudflare.com';
+// ✅ URL do novo backend no Render
+export const BACKEND_URL = 'https://programacao-tcc.onrender.com/api';
 
-console.log('🔧 Config carregada - BACKEND_IP:', BACKEND_IP); // log de verificação
+console.log('🚀 Backend configurado:', BACKEND_URL);
