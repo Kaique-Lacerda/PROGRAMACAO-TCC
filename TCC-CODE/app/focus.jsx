@@ -9,19 +9,17 @@ import {
   Switch,
   Modal,
   ActivityIndicator,
-  Dimensions
+  Animated
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Font from 'expo-font';
-// import { Video, ResizeMode } from 'expo-av';
 
 import { BACKEND_URL } from '../constants/config';
 
 export default function Focus() {
   const router = useRouter();
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const videoRef = useRef(null);
   
   // Estados do foco
   const [tempoFoco, setTempoFoco] = useState(25); // em minutos
@@ -39,7 +37,7 @@ export default function Focus() {
 
   // Estados da animação
   const [showAnimation, setShowAnimation] = useState(false);
-  const [animationLoaded, setAnimationLoaded] = useState(false);
+  const [showEntryAnimation, setShowEntryAnimation] = useState(true);
 
   // Estados da música
   const [musicaSelecionada, setMusicaSelecionada] = useState(null);
@@ -62,6 +60,17 @@ export default function Focus() {
       carregarConfiguracaoSalva();
     }
   }, [fontsLoaded]);
+
+  // Animação de entrada quando a tela abre
+  useEffect(() => {
+    if (showEntryAnimation) {
+      const timer = setTimeout(() => {
+        setShowEntryAnimation(false);
+      }, 3000); // 3 segundos de animação
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showEntryAnimation]);
 
   // Timer effect
   useEffect(() => {
@@ -143,7 +152,6 @@ export default function Focus() {
     if (!isRunning) {
       // Iniciar animação
       setShowAnimation(true);
-      setAnimationLoaded(false);
       
       // Após a animação, iniciar o timer
       setTimeout(() => {
@@ -151,7 +159,7 @@ export default function Focus() {
         setIsPausado(false);
         setTempoRestante(modoAtual === 'foco' ? tempoFoco * 60 : tempoDescanso * 60);
         setShowAnimation(false);
-      }, 6000); // 6 segundos da animação
+      }, 3000); // 3 segundos da animação
     }
   };
 
@@ -179,28 +187,6 @@ export default function Focus() {
       setModoAtual('foco');
       setTempoRestante(tempoFoco * 60);
     }
-  };
-
-const handleAnimationLoad = () => {
-  setAnimationLoaded(true);
-  // Inicia animação alternativa imediatamente
-  Animated.parallel([
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }),
-    Animated.timing(scaleAnim, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }),
-  ]).start();
-};
-
-  const handleAnimationEnd = () => {
-    // A animação termina automaticamente após 6 segundos
-    // O timeout no handleStart já cuida da transição
   };
 
   const formatarTempo = (segundos) => {
@@ -246,67 +232,26 @@ const handleAnimationLoad = () => {
       resizeMode="cover"
       style={styles.background}
     >
-      {/* Overlay da Animação */}
+      {/* Overlay da Animação de Entrada */}
+      {showEntryAnimation && (
+        <View style={styles.entryAnimationOverlay}>
+          <View style={styles.entryAnimationContainer}>
+            <Text style={styles.entryAnimationEmoji}>🎯</Text>
+            <Text style={styles.entryAnimationTitle}>Modo Foco</Text>
+            <Text style={styles.entryAnimationSubtitle}>Preparando ambiente concentrado...</Text>
+            <ActivityIndicator size="large" color="#ffb300" style={styles.entryAnimationLoader} />
+          </View>
+        </View>
+      )}
+
+      {/* Overlay da Animação do Start */}
       {showAnimation && (
         <View style={styles.animationOverlay}>
           <View style={styles.animationContainer}>
-            {!animationLoaded && (
-              <View style={styles.animationLoading}>
-                <ActivityIndicator size="large" color="#ffb300" />
-                <Text style={styles.animationLoadingText}>Carregando animação...</Text>
-              </View>
-            )}
-
-
-
-
-
-
-
-
-
-          <View style={styles.animationPlaceholder}>
-          <Text style={styles.animationPlaceholderText}>🎬</Text>
-          <Text style={styles.animationPlaceholderSubtext}>Animação de Foco</Text>
-         </View>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-           {/*
-            <Video
-              ref={videoRef}
-              source={require('../assets/animations/focus-start.mp4')} // Você vai criar este arquivo
-              style={styles.animationVideo}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay
-              isLooping={false}
-              onLoad={handleAnimationLoad}
-              onPlaybackStatusUpdate={(status) => {
-                if (status.didJustFinish) {
-                  handleAnimationEnd();
-                }
-              }}
-            />
-            */}
-
+            <View style={styles.animationPlaceholder}>
+              <Text style={styles.animationPlaceholderText}>🚀</Text>
+              <Text style={styles.animationPlaceholderSubtext}>Iniciando Foco</Text>
+            </View>
             <Text style={styles.animationText}>Preparando ambiente de foco...</Text>
           </View>
         </View>
@@ -630,7 +575,44 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Animação
+  // Animação de Entrada
+  entryAnimationOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    zIndex: 1000,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  entryAnimationContainer: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  entryAnimationEmoji: {
+    fontSize: 80,
+    marginBottom: 20,
+  },
+  entryAnimationTitle: {
+    fontSize: 36,
+    fontFamily: 'Lobster-Regular',
+    color: '#ffb300',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  entryAnimationSubtitle: {
+    fontSize: 18,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  entryAnimationLoader: {
+    marginTop: 20,
+  },
+
+  // Animação do Start
   animationOverlay: {
     position: 'absolute',
     top: 0,
@@ -647,27 +629,31 @@ const styles = StyleSheet.create({
     height: '60%',
     alignItems: 'center',
   },
-  animationVideo: {
+  animationPlaceholder: {
     width: '100%',
     height: '70%',
+    backgroundColor: 'rgba(255,179,0,0.1)',
     borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ffb300',
+    marginBottom: 20,
+  },
+  animationPlaceholderText: {
+    fontSize: 60,
+    marginBottom: 10,
+  },
+  animationPlaceholderSubtext: {
+    fontSize: 20,
+    color: '#ffb300',
+    fontWeight: 'bold',
   },
   animationText: {
     color: '#ffb300',
     fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 20,
     textAlign: 'center',
-  },
-  animationLoading: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '70%',
-  },
-  animationLoadingText: {
-    color: '#fff',
-    marginTop: 10,
-    fontSize: 16,
   },
 
   // OPÇÕES (direita)

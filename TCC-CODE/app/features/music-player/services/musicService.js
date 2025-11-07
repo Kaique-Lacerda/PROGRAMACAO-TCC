@@ -1,4 +1,4 @@
-import { BACKEND_URL } from '../constants/config';
+import { BACKEND_URL } from '../../../../constants/config';
 
 export const musicService = {
   // Buscar todas as músicas
