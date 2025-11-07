@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import Login from './login';
+import { musicService } from '../services/musicService';
 
 // ⚠️⚠️⚠️ ATUALIZAR URL QUANDO REINICIAR O SERVIDOR ⚠️⚠️⚠️
 import { BACKEND_URL } from '../constants/config';
@@ -434,51 +435,47 @@ function Jogo() {
 
   // === FUNÇÕES DE MÚSICA (CORRIGIDAS) ===
 
-  const fetchMusicas = async () => {
-    if (musicLoading) return;
-    setMusicLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('token');
-      console.log('🎵', 'MÚSICAS', 'Buscando músicas do servidor...');
-      
-      const res = await fetch(`${BACKEND_URL}/musicas`, {
-        headers: { 
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      
-      const data = await res.json();
-      console.log('✅', 'MÚSICAS', 
-        `Encontradas: ${data.preDefinidas?.length} pré-definidas, ` +
-        `${data.userMusicas?.length} do usuário`
-      );
-      setMusicas(data);
-    } catch (e) {
-      console.log('❌', 'MÚSICAS', 'Erro ao buscar músicas:', e);
-      // Carregar músicas mock para desenvolvimento
-      setMusicas({
-        preDefinidas: [
-          {
-            id: 1,
-            nome: "Música Relaxante",
-            artista: "Sistema",
-            duracao: "2:30",
-            favorita: false,
-            pre_definida: true,
-            caminho: "local_bathroom"
-          }
-        ],
-        userMusicas: [],
-        favoritas: []
-      });
-    }
-    setMusicLoading(false);
-  };
+const fetchMusicas = async () => {
+  if (musicLoading) return;
+  setMusicLoading(true);
+  try {
+    console.log('🎵', 'MÚSICAS', 'Buscando músicas do servidor...');
+    
+    // ✅ NOVO: Usa o service em vez de fetch direto
+    const data = await musicService.getMusics();
+    
+    console.log('✅', 'MÚSICAS', 
+      `Encontradas: ${data.length} músicas`
+    );
+    
+    // ✅ NOVO: Adapta a estrutura para o formato esperado pelo componente
+    const musicasAdaptadas = data.map(musica => ({
+      id: musica._id,
+      nome: musica.title,
+      artista: musica.artist,
+      duracao: `${Math.floor(musica.duration / 60)}:${(musica.duration % 60).toString().padStart(2, '0')}`,
+      favorita: musica.isFavorite,
+      pre_definida: true, // Todas são pré-definidas por enquanto
+      caminho: `local_${musica.filePath.replace('.mp3', '').toLowerCase()}`
+    }));
+    
+    setMusicas({
+      preDefinidas: musicasAdaptadas,
+      userMusicas: [],
+      favoritas: musicasAdaptadas.filter(m => m.favorita)
+    });
+    
+  } catch (e) {
+    console.log('❌', 'MÚSICAS', 'Erro ao buscar músicas:', e);
+    // Fallback para desenvolvimento
+    setMusicas({
+      preDefinidas: [],
+      userMusicas: [],
+      favoritas: []
+    });
+  }
+  setMusicLoading(false);
+};
 
   const playMusica = async (musica) => {
     console.log('🎵', 'PLAYER', `Tocando: ${musica.nome}`);
@@ -515,16 +512,18 @@ function Jogo() {
     try {
       let source;
       
-      // 🎯 SISTEMA CORRIGIDO - Mapeamento dos arquivos locais
-      const mapeamentoAudios = {
-        'local_bathroom': require('../assets/audio/bathroom.mp3'),
-        'local_eu_vou_te_comer_sorrindo': require('../assets/audio/Eu_Vou_Te_Comer_Sorrindo.mp3'),
-        'local_k_o': require('../assets/audio/K.O.mp3'),
-        'local_rainbow_all_night_long': require('../assets/audio/All_Night_Long.mp3'),
-        'local_shut_up_and_listen': require('../assets/audio/Shut_Up_and_Listen.mp3'),
-        'local_sol_loiro': require('../assets/audio/Sol_Loiro.mp3'),
-        'local_flamingos': require('../assets/audio/flamingos.mp3')
+
+// 🎯 SISTEMA CORRIGIDO - Mapeamento dos arquivos locais
+    const mapeamentoAudios = {
+      'local_all_night_long': require('../assets/audio/All_Night_Long.mp3'),
+      'local_eu_vou_te_comer_sorrindo': require('../assets/audio/Eu_Vou_Te_Comer_Sorrindo.mp3'),
+      'local_k_o': require('../assets/audio/K.O.mp3'),
+      'local_shut_up_and_listen': require('../assets/audio/Shut_Up_and_Listen.mp3'),
+      'local_sol_loiro': require('../assets/audio/Sol_Loiro.mp3'),
+      'local_bathroom': require('../assets/audio/bathroom.mp3'),
+      'local_flamingos': require('../assets/audio/flamingos.mp3')
       };
+
 
       if (mapeamentoAudios[musica.caminho]) {
         console.log('📁', 'PLAYER', `Carregando arquivo local: ${musica.caminho}`);
@@ -614,148 +613,113 @@ function Jogo() {
     }
   };
 
-  const toggleFavorito = async (musicaId) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${BACKEND_URL}/musicas/${musicaId}/favorito`, {
-        method: 'PUT',
-        headers: { 
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (res.ok) {
-        // Atualiza a lista local
-        const atualizarMusica = (lista) => lista.map(m => 
-          m.id === musicaId ? { ...m, favorita: !m.favorita } : m
-        );
-        
-        setMusicas(prev => ({
-          preDefinidas: atualizarMusica(prev.preDefinidas),
-          userMusicas: atualizarMusica(prev.userMusicas),
-          favoritas: prev.favoritas.filter(m => m.id !== musicaId)
-        }));
-        console.log('⭐', 'MÚSICAS', `Favorito alternado para música ID: ${musicaId}`);
-      }
-    } catch (e) {
-      console.log('❌', 'MÚSICAS', 'Erro ao favoritar:', e);
-      // Atualização local em caso de erro de rede
-      const atualizarMusica = (lista) => lista.map(m => 
-        m.id === musicaId ? { ...m, favorita: !m.favorita } : m
-      );
-      
-      setMusicas(prev => ({
-        preDefinidas: atualizarMusica(prev.preDefinidas),
-        userMusicas: atualizarMusica(prev.userMusicas),
-        favoritas: prev.favoritas.filter(m => m.id !== musicaId)
-      }));
-    }
-  };
+const toggleFavorito = async (musicaId) => {
+  try {
+    console.log('⭐', 'MÚSICAS', `Alternando favorito para música ID: ${musicaId}`);
+    
+    // ✅ NOVO: Usa o service
+    const result = await musicService.toggleFavorite(musicaId);
+    
+    // ✅ NOVO: Atualiza a lista local com a resposta do servidor
+    const atualizarMusica = (lista) => lista.map(m => 
+      m.id === musicaId ? { ...m, favorita: result.isFavorite } : m
+    );
+    
+    setMusicas(prev => ({
+      preDefinidas: atualizarMusica(prev.preDefinidas),
+      userMusicas: atualizarMusica(prev.userMusicas),
+      favoritas: result.isFavorite 
+        ? [...prev.favoritas, prev.preDefinidas.find(m => m.id === musicaId)].filter(Boolean)
+        : prev.favoritas.filter(m => m.id !== musicaId)
+    }));
+    
+    console.log('✅', 'MÚSICAS', `Favorito atualizado: ${result.isFavorite}`);
+    
+  } catch (e) {
+    console.log('❌', 'MÚSICAS', 'Erro ao favoritar:', e);
+    // Fallback local em caso de erro
+    const atualizarMusica = (lista) => lista.map(m => 
+      m.id === musicaId ? { ...m, favorita: !m.favorita } : m
+    );
+    
+    setMusicas(prev => ({
+      preDefinidas: atualizarMusica(prev.preDefinidas),
+      userMusicas: atualizarMusica(prev.userMusicas),
+      favoritas: prev.favoritas.filter(m => m.id !== musicaId)
+    }));
+  }
+};
 
   const deletarMusica = async (musicaId) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${BACKEND_URL}/musicas/${musicaId}`, {
-        method: 'DELETE',
-        headers: { 
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
-      });
+  try {
+    console.log('🗑️', 'MÚSICAS', `Tentando deletar música ID: ${musicaId}`);
+    
+    // ✅ CORREÇÃO: Remove apenas localmente (não chama API)
+    
+    // Remove da lista local
+    setMusicas(prev => ({
+      ...prev,
+      userMusicas: prev.userMusicas.filter(m => m.id !== musicaId)
+    }));
+    
+    // Se era a música atual, para
+    if (musicaAtual && musicaAtual.id === musicaId) {
+      await stopMusica();
+    }
+    
+    console.log('✅', 'MÚSICAS', `Música deletada localmente ID: ${musicaId}`);
+    
+  } catch (e) {
+    console.log('❌', 'MÚSICAS', 'Erro ao deletar música:', e);
+    // Remove localmente mesmo em caso de erro
+    setMusicas(prev => ({
+      ...prev,
+      userMusicas: prev.userMusicas.filter(m => m.id !== musicaId)
+    }));
+  }
+};
+
+const handleAddLocalMusic = async () => {
+  try {
+    console.log('📁', 'MÚSICAS', 'Iniciando seleção de arquivo...');
+    const result = await DocumentPicker.getDocumentAsync({ 
+      type: 'audio/*',
+      copyToCacheDirectory: true
+    });
+    
+    console.log('📦', 'MÚSICAS', 'Resultado do DocumentPicker:', result);
+    
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const track = result.assets[0];
+      console.log('✅', 'MÚSICAS', `Arquivo selecionado: ${track.name}`);
       
-      if (res.ok) {
-        // Remove da lista local
-        setMusicas(prev => ({
-          ...prev,
-          userMusicas: prev.userMusicas.filter(m => m.id !== musicaId)
-        }));
-        
-        // Se era a música atual, para
-        if (musicaAtual && musicaAtual.id === musicaId) {
-          await stopMusica();
-        }
-        console.log('🗑️', 'MÚSICAS', `Música deletada ID: ${musicaId}`);
-      }
-    } catch (e) {
-      console.log('❌', 'MÚSICAS', 'Erro ao deletar música:', e);
-      // Remove localmente em caso de erro
+      // ✅ CORREÇÃO: Salva apenas localmente (não envia para o backend)
+      const novaMusica = {
+        id: Date.now(),
+        nome: track.name || 'Música Local',
+        caminho: track.uri,
+        artista: 'Arquivo Local',
+        duracao: '0:00',
+        favorita: false,
+        pre_definida: false
+      };
+      
       setMusicas(prev => ({
         ...prev,
-        userMusicas: prev.userMusicas.filter(m => m.id !== musicaId)
+        userMusicas: [...prev.userMusicas, novaMusica]
       }));
-    }
-  };
-
-  const handleAddLocalMusic = async () => {
-    try {
-      console.log('📁', 'MÚSICAS', 'Iniciando seleção de arquivo...');
-      const result = await DocumentPicker.getDocumentAsync({ 
-        type: 'audio/*',
-        copyToCacheDirectory: true
-      });
       
-      console.log('📦', 'MÚSICAS', 'Resultado do DocumentPicker:', result);
+      console.log('✅', 'MÚSICAS', 'Música adicionada localmente');
+      alert('Música adicionada com sucesso!');
       
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const track = result.assets[0];
-        console.log('✅', 'MÚSICAS', `Arquivo selecionado: ${track.name}`);
-        
-        // Tenta salvar no backend primeiro
-        try {
-          const token = await AsyncStorage.getItem('token');
-          
-          const res = await fetch(`${BACKEND_URL}/musicas`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': token || ''
-            },
-            body: JSON.stringify({ 
-              nome: track.name || 'Música Local',
-              caminho: track.uri,
-              artista: 'Arquivo Local',
-              duracao: '0:00'
-            })
-          });
-          
-          if (res.ok) {
-            const data = await res.json();
-            console.log('✅', 'MÚSICAS', `Música salva no servidor: ${data.nome}`);
-            await fetchMusicas();
-            alert('Música adicionada com sucesso!');
-          } else {
-            throw new Error(`Erro do servidor: ${res.status}`);
-          }
-        } catch (networkError) {
-          console.log('❌', 'MÚSICAS', 'Erro de rede, salvando localmente:', networkError);
-          
-          // Adiciona localmente em caso de erro de rede
-          const novaMusica = {
-            id: Date.now(),
-            nome: track.name || 'Música Local',
-            caminho: track.uri,
-            artista: 'Arquivo Local',
-            duracao: '0:00',
-            favorita: false,
-            pre_definida: false
-          };
-          
-          setMusicas(prev => ({
-            ...prev,
-            userMusicas: [...prev.userMusicas, novaMusica]
-          }));
-          
-          alert('Música adicionada localmente (sem conexão com o servidor)');
-        }
-      } else {
-        console.log('ℹ️', 'MÚSICAS', 'Seleção de música cancelada');
-      }
-    } catch (e) {
-      console.log('❌', 'MÚSICAS', 'Erro geral ao selecionar música:', e);
-      alert('Erro ao selecionar música. Tente novamente.');
+    } else {
+      console.log('ℹ️', 'MÚSICAS', 'Seleção de música cancelada');
     }
-  };
+  } catch (e) {
+    console.log('❌', 'MÚSICAS', 'Erro geral ao selecionar música:', e);
+    alert('Erro ao selecionar música. Tente novamente.');
+  }
+};
 
   // === COMPONENTES DE MÚSICA ===
 

@@ -16,6 +16,10 @@ app.use(express.json());
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+// Rotas de Música
+const musicRoutes = require('./routes/music');
+app.use('/api/musicas', musicRoutes);
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({ 
