@@ -381,18 +381,18 @@ function Jogo() {
 
   const getCenarioSource = (cenario) => {
     switch (cenario) {
-      case 'manha_ensolarado': return require('../assets/images/background100.png');
-      case 'manha_nublado': return require('../assets/images/background100.png');
-      case 'manha_chuvoso': return require('../assets/images/background100.png');
-      case 'tarde_ensolarado': return require('../assets/images/background100.png');
-      case 'tarde_nublado': return require('../assets/images/background100.png');
-      case 'tarde_chuvoso': return require('../assets/images/background100.png');
-      case 'entardecer_ensolarado': return require('../assets/images/background100.png');
-      case 'entardecer_nublado': return require('../assets/images/background100.png');
-      case 'noite_ensolarado': return require('../assets/images/background100.png');
-      case 'noite_nublado': return require('../assets/images/background100.png');
-      case 'noite_chuvoso': return require('../assets/images/background100.png');
-      default: return require('../assets/images/background100.png');
+      case 'manha_ensolarado': return require('../assets/images/wallpaper.png');
+      case 'manha_nublado': return require('../assets/images/wallpaper.png');
+      case 'manha_chuvoso': return require('../assets/images/wallpaper.png');
+      case 'tarde_ensolarado': return require('../assets/images/wallpaper.png');
+      case 'tarde_nublado': return require('../assets/images/wallpaper.png');
+      case 'tarde_chuvoso': return require('../assets/images/wallpaper.png');
+      case 'entardecer_ensolarado': return require('../assets/images/wallpaper.png');
+      case 'entardecer_nublado': return require('../assets/images/wallpaper.png');
+      case 'noite_ensolarado': return require('../assets/images/wallpaper.png');
+      case 'noite_nublado': return require('../assets/images/wallpaper.png');
+      case 'noite_chuvoso': return require('../assets/images/wallpaper.png');
+      default: return require('../assets/images/wallpaper.png');
     }
   };
 
@@ -934,15 +934,18 @@ function Jogo() {
           </Text>
         </TouchableOpacity>
 
-        {/* Área do personagem */}
+        {/* Área do personagem: agora usa a imagem `elementos.png` como elemento visual */}
         <TouchableOpacity
           style={styles.personHitbox}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           onPress={() => router.push('/cronometro')}
+          accessibilityLabel="Área do personagem"
         >
-          <Text style={{ color: '#ffb300', fontWeight: 'bold', textAlign: 'center', fontSize: 12 }}>
-            Área do personagem{'\n'}(toque)
-          </Text>
+          <Image
+            source={require('../assets/images/elementos.png')}
+            style={styles.personImage}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
 
         {/* Personagem Focus */}
@@ -1184,14 +1187,16 @@ const styles = StyleSheet.create({
     height: 250,
     left: '5%',
     top: '35%',
-    borderWidth: 2,
-    borderColor: '#ffb300',
-    borderRadius: 8,
+    // visual agora é a imagem interna; manter posicionamento e zIndex
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,179,0,0.06)',
     zIndex: 15,
     padding: 8,
+  },
+  personImage: {
+    width: '100%',
+    height: '100%',
+    alignSelf: 'center',
   },
   focusHitbox: {
     position: 'absolute',

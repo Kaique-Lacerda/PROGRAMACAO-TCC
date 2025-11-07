@@ -91,7 +91,7 @@ export default function Index() {
   return (
     <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={handleEnter}>
       <AnimatedImageBackground
-        source={require('../assets/images/background2.gif')}
+        source={require('../assets/images/wallpaper.png')}
         resizeMode="cover"
         style={[styles.container, { opacity: fadeAnim }]}
       >

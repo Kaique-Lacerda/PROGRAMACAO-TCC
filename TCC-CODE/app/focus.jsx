@@ -194,7 +194,7 @@ export default function Focus() {
   if (!fontsLoaded) {
     return (
       <ImageBackground
-        source={require('../assets/images/background2.gif')}
+        source={require('../assets/images/wallpaper.png')}
         resizeMode="cover"
         style={styles.background}
       >
@@ -208,7 +208,7 @@ export default function Focus() {
 
   return (
     <ImageBackground
-      source={require('../assets/images/background2.gif')}
+      source={require('../assets/images/wallpaper.png')}
       resizeMode="cover"
       style={styles.background}
     >

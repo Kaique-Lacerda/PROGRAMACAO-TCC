@@ -188,7 +188,7 @@ export default function Perfil() {
   if (!fontsLoaded || loading) {
     return (
       <ImageBackground
-        source={require('../assets/images/background2.gif')}
+        source={require('../assets/images/wallpaper.png')}
         resizeMode="cover"
         style={styles.background}
       >
@@ -202,7 +202,7 @@ export default function Perfil() {
 
   return (
     <ImageBackground
-      source={require('../assets/images/background2.gif')}
+      source={require('../assets/images/wallpaper.png')}
       resizeMode="cover"
       style={styles.background}
     >

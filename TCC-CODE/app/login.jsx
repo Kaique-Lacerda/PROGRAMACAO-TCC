@@ -71,7 +71,7 @@ export default function Login({ onLogin }) {
   if (!fontsLoaded) {
     return (
       <ImageBackground
-        source={require('../assets/images/background2.gif')}
+        source={require('../assets/images/elementos.png')}
         resizeMode="cover"
         style={styles.background}
       >
@@ -85,7 +85,7 @@ export default function Login({ onLogin }) {
 
   return (
     <ImageBackground
-      source={require('../assets/images/background100.png')}
+      source={require('../assets/images/elementos.png')}
       resizeMode="cover"
       style={styles.background}
     >
