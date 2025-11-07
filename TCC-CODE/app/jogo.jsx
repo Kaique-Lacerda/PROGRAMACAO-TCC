@@ -477,43 +477,42 @@ const fetchMusicas = async () => {
   setMusicLoading(false);
 };
 
-  const playMusica = async (musica) => {
-    console.log('🎵', 'PLAYER', `Tocando: ${musica.nome}`);
-    console.log('🔗', 'PLAYER', `Caminho: ${musica.caminho}`);
-    console.log('🏷️', 'PLAYER', `Tipo: ${musica.pre_definida ? 'Pré-definida' : 'Usuário'}`);
-    
-    if (loading) return;
-    
-    setLoading(true);
-    
-    // Se já está tocando a mesma música, apenas pausa/despausa
-    if (musicaAtual && musicaAtual.id === musica.id && sound) {
-      if (tocando) {
-        await sound.pauseAsync();
-        setTocando(false);
-        console.log('⏸️', 'PLAYER', 'Música pausada');
-      } else {
-        await sound.playAsync();
-        setTocando(true);
-        console.log('▶️', 'PLAYER', 'Música retomada');
-      }
-      setLoading(false);
-      return;
+const playMusica = async (musica) => {
+  console.log('🎵', 'PLAYER', `Tocando: ${musica.nome}`);
+  console.log('🔗', 'PLAYER', `Caminho: ${musica.caminho}`);
+  console.log('🏷️', 'PLAYER', `Tipo: ${musica.pre_definida ? 'Pré-definida' : 'Usuário'}`);
+  
+  if (loading) return;
+  
+  setLoading(true);
+  
+  // Se já está tocando a mesma música, apenas pausa/despausa
+  if (musicaAtual && musicaAtual.id === musica.id && sound) {
+    if (tocando) {
+      await sound.pauseAsync();
+      setTocando(false);
+      console.log('⏸️', 'PLAYER', 'Música pausada');
+    } else {
+      await sound.playAsync();
+      setTocando(true);
+      console.log('▶️', 'PLAYER', 'Música retomada');
     }
+    setLoading(false);
+    return;
+  }
 
-    // Para música atual se houver
-    if (sound) {
-      await sound.stopAsync();
-      await sound.unloadAsync();
-      setSound(null);
-      console.log('🛑', 'PLAYER', 'Música anterior parada');
-    }
+  // Para música atual se houver
+  if (sound) {
+    await sound.stopAsync();
+    await sound.unloadAsync();
+    setSound(null);
+    console.log('🛑', 'PLAYER', 'Música anterior parada');
+  }
 
-    try {
-      let source;
-      
-
-// 🎯 SISTEMA CORRIGIDO - Mapeamento dos arquivos locais
+  try {
+    let source;
+    
+    // 🎯 SISTEMA CORRIGIDO - Mapeamento dos arquivos locais
     const mapeamentoAudios = {
       'local_all_night_long': require('../assets/audio/All_Night_Long.mp3'),
       'local_eu_vou_te_comer_sorrindo': require('../assets/audio/Eu_Vou_Te_Comer_Sorrindo.mp3'),
@@ -522,62 +521,61 @@ const fetchMusicas = async () => {
       'local_sol_loiro': require('../assets/audio/Sol_Loiro.mp3'),
       'local_bathroom': require('../assets/audio/bathroom.mp3'),
       'local_flamingos': require('../assets/audio/flamingos.mp3')
-      };
+    };
 
-
-      if (mapeamentoAudios[musica.caminho]) {
-        console.log('📁', 'PLAYER', `Carregando arquivo local: ${musica.caminho}`);
-        source = mapeamentoAudios[musica.caminho];
-      } else if (musica.caminho.startsWith('http')) {
-        console.log('🌐', 'PLAYER', `Carregando URL web: ${musica.caminho}`);
-        source = { uri: musica.caminho };
-      } else {
-        console.log('❌', 'PLAYER', `Caminho não reconhecido: ${musica.caminho}`);
-        throw new Error(`Tipo de áudio não suportado: ${musica.caminho}`);
-      }
-      
-      console.log('✅', 'PLAYER', 'Source configurado corretamente');
-
-      // Configuração de áudio
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-      });
-
-      console.log('▶️', 'PLAYER', 'Criando instância de áudio...');
-      
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        source,
-        { 
-          shouldPlay: true,
-          isLooping: false
-        }
-      );
-      
-      console.log('✅', 'PLAYER', 'Áudio criado e tocando!');
-      
-      setSound(newSound);
-      setMusicaAtual(musica);
-      setTocando(true);
-      setShowPlayerMini(true);
-      
-      // Evento quando a música terminar
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
-          console.log('🏁', 'PLAYER', 'Música terminou naturalmente');
-          setTocando(false);
-          setMusicaAtual(null);
-          setShowPlayerMini(false);
-        }
-      });
-      
-    } catch (e) {
-      console.log('❌', 'PLAYER', `Erro ao tocar música: ${e.message}`);
-      alert('Erro ao tentar tocar a música: ' + e.message);
+    if (mapeamentoAudios[musica.caminho]) {
+      console.log('📁', 'PLAYER', `Carregando arquivo local: ${musica.caminho}`);
+      source = mapeamentoAudios[musica.caminho];
+    } else if (musica.caminho.startsWith('http') || musica.caminho.startsWith('file://')) {
+      console.log('📱', 'PLAYER', `Carregando arquivo do dispositivo: ${musica.caminho}`);
+      source = { uri: musica.caminho };
+    } else {
+      console.log('❌', 'PLAYER', `Caminho não reconhecido: ${musica.caminho}`);
+      throw new Error(`Tipo de áudio não suportado: ${musica.caminho}`);
     }
-    setLoading(false);
-  };
+    
+    console.log('✅', 'PLAYER', 'Source configurado corretamente');
+
+    // Configuração de áudio
+    await Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      shouldDuckAndroid: true,
+    });
+
+    console.log('▶️', 'PLAYER', 'Criando instância de áudio...');
+    
+    const { sound: newSound } = await Audio.Sound.createAsync(
+      source,
+      { 
+        shouldPlay: true,
+        isLooping: false
+      }
+    );
+    
+    console.log('✅', 'PLAYER', 'Áudio criado e tocando!');
+    
+    setSound(newSound);
+    setMusicaAtual(musica);
+    setTocando(true);
+    setShowPlayerMini(true);
+    
+    // Evento quando a música terminar
+    newSound.setOnPlaybackStatusUpdate((status) => {
+      if (status.didJustFinish) {
+        console.log('🏁', 'PLAYER', 'Música terminou naturalmente');
+        setTocando(false);
+        setMusicaAtual(null);
+        setShowPlayerMini(false);
+      }
+    });
+    
+  } catch (e) {
+    console.log('❌', 'PLAYER', `Erro ao tocar música: ${e.message}`);
+    alert('Erro ao tentar tocar a música: ' + e.message);
+  }
+  setLoading(false);
+};
 
   const handlePlayPause = async () => {
     if (!sound || !musicaAtual) return;
