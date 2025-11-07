@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Font from 'expo-font';
 
-import { BACKEND_IP } from '../constants/config';
+import { BACKEND_URL } from '../constants/config';
 
 export default function Focus() {
   const router = useRouter();
@@ -476,75 +476,82 @@ const styles = StyleSheet.create({
     color: '#ffb300',
     fontWeight: 'bold',
   },
+
+  // layout principal: personagem + menu (direita) mais compacto
   content: {
     flexDirection: 'row',
     flex: 1,
+    alignItems: 'flex-start',
   },
   personagemContainer: {
     flex: 1,
     alignItems: 'center',
-    marginRight: 20,
+    marginRight: 12, // reduzir espaço entre colunas
   },
   personagem: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    borderWidth: 3,
+    width: 120, // reduzir tamanho da imagem para liberar espaço
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 2,
     borderColor: '#ffb300',
   },
+
   statusContainer: {
-    marginTop: 20,
+    marginTop: 14,
     alignItems: 'center',
   },
   statusText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   ciclosText: {
     color: '#ccc',
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
   },
+
+  // OPÇÕES (direita) mais enxuto: limitar largura e ajustar paddings/ fontes
   opcoesContainer: {
-    flex: 2,
+    flex: 1,
+    maxWidth: 420, // limite para evitar ocupar toda a tela
   },
   timerContainer: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    padding: 25,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    padding: 16, // reduzir padding
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
     borderWidth: 2,
     borderColor: '#ffb300',
   },
   timerText: {
-    fontSize: 48,
+    fontSize: 36, // reduzir fonte do timer
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   modoText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#ffb300',
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   timerControls: {
     width: '100%',
   },
   startButton: {
     backgroundColor: '#4CAF50',
-    paddingVertical: 15,
+    paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
   },
   startButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: 16,
   },
   runningControls: {
     flexDirection: 'row',
@@ -553,47 +560,48 @@ const styles = StyleSheet.create({
   pauseButton: {
     flex: 1,
     backgroundColor: '#FFA000',
-    paddingVertical: 15,
+    paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   pauseButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   stopButton: {
     flex: 1,
     backgroundColor: '#F44336',
-    paddingVertical: 15,
+    paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
   },
   stopButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
+
   configSection: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 15,
-    padding: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    padding: 12, // reduzir padding
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#ffb300',
-    marginBottom: 15,
+    marginBottom: 12,
   },
   configItem: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   configLabel: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   timeInputContainer: {
     flexDirection: 'row',
@@ -601,9 +609,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   timeButton: {
-    backgroundColor: 'rgba(255,179,0,0.2)',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    backgroundColor: 'rgba(255,179,0,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ffb300',
@@ -611,11 +619,11 @@ const styles = StyleSheet.create({
   timeButtonText: {
     color: '#ffb300',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   timeDisplay: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     minWidth: 40,
     textAlign: 'center',
@@ -626,10 +634,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   musicSelectButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    padding: 10,
     borderRadius: 8,
-    marginTop: 10,
+    marginTop: 8,
     borderWidth: 1,
     borderColor: '#ffb300',
   },
@@ -639,56 +647,56 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   preDefinicoesScroll: {
-    marginTop: 10,
+    marginTop: 8,
   },
   preDefinicaoCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 10,
-    padding: 15,
-    marginRight: 10,
-    minWidth: 140,
+    padding: 12,
+    marginRight: 8,
+    minWidth: 120,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   preDefinicaoCardAtiva: {
     borderColor: '#ffb300',
-    backgroundColor: 'rgba(255,179,0,0.1)',
+    backgroundColor: 'rgba(255,179,0,0.08)',
   },
   preDefinicaoTitulo: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 14,
-    marginBottom: 5,
+    fontSize: 13,
+    marginBottom: 4,
   },
   preDefinicaoDescricao: {
     color: '#ccc',
-    fontSize: 12,
-    marginBottom: 8,
+    fontSize: 11,
+    marginBottom: 6,
   },
   preDefinicaoTempo: {
     color: '#ffb300',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
   },
   actionButtons: {
-    marginTop: 20,
+    marginTop: 12,
   },
   saveButton: {
-    backgroundColor: 'rgba(255,179,0,0.2)',
-    paddingVertical: 15,
+    backgroundColor: 'rgba(255,179,0,0.15)',
+    paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#ffb300',
     alignItems: 'center',
   },
   saveButtonSuccess: {
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
     borderColor: '#4CAF50',
   },
   saveButtonText: {
     color: '#ffb300',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,
@@ -723,7 +731,7 @@ const styles = StyleSheet.create({
   },
   musicItem: {
     backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 15,
+    padding: 12,
     borderRadius: 8,
     marginBottom: 10,
     borderWidth: 1,
@@ -735,7 +743,7 @@ const styles = StyleSheet.create({
   },
   modalCloseButton: {
     backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 15,
+    padding: 12,
     borderRadius: 10,
     alignItems: 'center',
   },

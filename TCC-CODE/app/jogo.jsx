@@ -166,6 +166,19 @@ const MusicInterface = ({
             <Text style={styles.addMusicSubtext}>MP3, WAV, AAC</Text>
           </TouchableOpacity>
 
+          {/* Botão Recarregar (temporário) */}
+          <TouchableOpacity 
+            onPress={() => {
+              console.log('🔄 Recarregando músicas manualmente...');
+              // Esta função precisa ser passada como prop
+            }}
+            style={[styles.addMusicBtn, {backgroundColor: 'rgba(0,100,255,0.2)', marginBottom: 10}]}
+          >
+            <View style={styles.addMusicBtnContent}>
+              <Text style={[styles.addMusicText, {color: '#0066ff'}]}>🔄 Recarregar Músicas</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Abas */}
           <View style={styles.abasContainer}>
             <TouchableOpacity 
@@ -349,8 +362,39 @@ function Jogo() {
   useEffect(() => {
     if (isLoggedIn) {
       fetchMusicas();
+      carregarMusicasDoStorage(); // ✅ NOVO: Carrega músicas salvas
     }
   }, [isLoggedIn]);
+
+  // === FUNÇÕES DE PERSISTÊNCIA ===
+
+  // Salvar músicas no AsyncStorage
+  const salvarMusicasNoStorage = async () => {
+    try {
+      await AsyncStorage.setItem('user_musicas', JSON.stringify(musicas.userMusicas));
+      console.log('💾', 'STORAGE', 'Músicas salvas no AsyncStorage');
+    } catch (error) {
+      console.log('❌', 'STORAGE', 'Erro ao salvar músicas:', error);
+    }
+  };
+
+  // Carregar músicas do AsyncStorage
+  const carregarMusicasDoStorage = async () => {
+    try {
+      const storedMusicas = await AsyncStorage.getItem('user_musicas');
+      if (storedMusicas) {
+        const userMusicas = JSON.parse(storedMusicas);
+        console.log('📂', 'STORAGE', `Carregadas ${userMusicas.length} músicas do storage`);
+        
+        setMusicas(prev => ({
+          ...prev,
+          userMusicas: userMusicas
+        }));
+      }
+    } catch (error) {
+      console.log('❌', 'STORAGE', 'Erro ao carregar músicas:', error);
+    }
+  };
 
   // === FUNÇÕES DOS CENÁRIOS ===
 
@@ -419,6 +463,7 @@ function Jogo() {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user_musicas'); // ✅ Limpa músicas no logout se quiser
       setIsLoggedIn(false);
       if (sound) {
         await sound.stopAsync();
@@ -435,147 +480,147 @@ function Jogo() {
 
   // === FUNÇÕES DE MÚSICA (CORRIGIDAS) ===
 
-const fetchMusicas = async () => {
-  if (musicLoading) return;
-  setMusicLoading(true);
-  try {
-    console.log('🎵', 'MÚSICAS', 'Buscando músicas do servidor...');
-    
-    // ✅ NOVO: Usa o service em vez de fetch direto
-    const data = await musicService.getMusics();
-    
-    console.log('✅', 'MÚSICAS', 
-      `Encontradas: ${data.length} músicas`
-    );
-    
-    // ✅ NOVO: Adapta a estrutura para o formato esperado pelo componente
-    const musicasAdaptadas = data.map(musica => ({
-      id: musica._id,
-      nome: musica.title,
-      artista: musica.artist,
-      duracao: `${Math.floor(musica.duration / 60)}:${(musica.duration % 60).toString().padStart(2, '0')}`,
-      favorita: musica.isFavorite,
-      pre_definida: true, // Todas são pré-definidas por enquanto
-      caminho: `local_${musica.filePath.replace('.mp3', '').toLowerCase()}`
-    }));
-    
-    setMusicas({
-      preDefinidas: musicasAdaptadas,
-      userMusicas: [],
-      favoritas: musicasAdaptadas.filter(m => m.favorita)
-    });
-    
-  } catch (e) {
-    console.log('❌', 'MÚSICAS', 'Erro ao buscar músicas:', e);
-    // Fallback para desenvolvimento
-    setMusicas({
-      preDefinidas: [],
-      userMusicas: [],
-      favoritas: []
-    });
-  }
-  setMusicLoading(false);
-};
+  const fetchMusicas = async () => {
+    if (musicLoading) return;
+    setMusicLoading(true);
+    try {
+      console.log('🎵', 'MÚSICAS', 'Buscando músicas do servidor...');
+      
+      // ✅ NOVO: Usa o service em vez de fetch direto
+      const data = await musicService.getMusics();
+      
+      console.log('✅', 'MÚSICAS', 
+        `Encontradas: ${data.length} músicas`
+      );
+      
+      // ✅ NOVO: Adapta a estrutura para o formato esperado pelo componente
+      const musicasAdaptadas = data.map(musica => ({
+        id: musica._id,
+        nome: musica.title,
+        artista: musica.artist,
+        duracao: `${Math.floor(musica.duration / 60)}:${(musica.duration % 60).toString().padStart(2, '0')}`,
+        favorita: musica.isFavorite,
+        pre_definida: true, // Todas são pré-definidas por enquanto
+        caminho: `local_${musica.filePath.replace('.mp3', '').toLowerCase()}`
+      }));
+      
+      setMusicas(prev => ({
+        ...prev,
+        preDefinidas: musicasAdaptadas,
+        favoritas: musicasAdaptadas.filter(m => m.favorita)
+      }));
+      
+    } catch (e) {
+      console.log('❌', 'MÚSICAS', 'Erro ao buscar músicas:', e);
+      // Fallback para desenvolvimento
+      setMusicas(prev => ({
+        ...prev,
+        preDefinidas: [],
+        favoritas: []
+      }));
+    }
+    setMusicLoading(false);
+  };
 
-const playMusica = async (musica) => {
-  console.log('🎵', 'PLAYER', `Tocando: ${musica.nome}`);
-  console.log('🔗', 'PLAYER', `Caminho: ${musica.caminho}`);
-  console.log('🏷️', 'PLAYER', `Tipo: ${musica.pre_definida ? 'Pré-definida' : 'Usuário'}`);
-  
-  if (loading) return;
-  
-  setLoading(true);
-  
-  // Se já está tocando a mesma música, apenas pausa/despausa
-  if (musicaAtual && musicaAtual.id === musica.id && sound) {
-    if (tocando) {
-      await sound.pauseAsync();
-      setTocando(false);
-      console.log('⏸️', 'PLAYER', 'Música pausada');
-    } else {
-      await sound.playAsync();
+  const playMusica = async (musica) => {
+    console.log('🎵', 'PLAYER', `Tocando: ${musica.nome}`);
+    console.log('🔗', 'PLAYER', `Caminho: ${musica.caminho}`);
+    console.log('🏷️', 'PLAYER', `Tipo: ${musica.pre_definida ? 'Pré-definida' : 'Usuário'}`);
+    
+    if (loading) return;
+    
+    setLoading(true);
+    
+    // Se já está tocando a mesma música, apenas pausa/despausa
+    if (musicaAtual && musicaAtual.id === musica.id && sound) {
+      if (tocando) {
+        await sound.pauseAsync();
+        setTocando(false);
+        console.log('⏸️', 'PLAYER', 'Música pausada');
+      } else {
+        await sound.playAsync();
+        setTocando(true);
+        console.log('▶️', 'PLAYER', 'Música retomada');
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Para música atual se houver
+    if (sound) {
+      await sound.stopAsync();
+      await sound.unloadAsync();
+      setSound(null);
+      console.log('🛑', 'PLAYER', 'Música anterior parada');
+    }
+
+    try {
+      let source;
+      
+      // 🎯 SISTEMA CORRIGIDO - Mapeamento dos arquivos locais
+      const mapeamentoAudios = {
+        'local_all_night_long': require('../assets/audio/All_Night_Long.mp3'),
+        'local_eu_vou_te_comer_sorrindo': require('../assets/audio/Eu_Vou_Te_Comer_Sorrindo.mp3'),
+        'local_k_o': require('../assets/audio/K.O.mp3'),
+        'local_shut_up_and_listen': require('../assets/audio/Shut_Up_and_Listen.mp3'),
+        'local_sol_loiro': require('../assets/audio/Sol_Loiro.mp3'),
+        'local_bathroom': require('../assets/audio/bathroom.mp3'),
+        'local_flamingos': require('../assets/audio/flamingos.mp3')
+      };
+
+      if (mapeamentoAudios[musica.caminho]) {
+        console.log('📁', 'PLAYER', `Carregando arquivo local: ${musica.caminho}`);
+        source = mapeamentoAudios[musica.caminho];
+      } else if (musica.caminho.startsWith('http') || musica.caminho.startsWith('file://')) {
+        console.log('📱', 'PLAYER', `Carregando arquivo do dispositivo: ${musica.caminho}`);
+        source = { uri: musica.caminho };
+      } else {
+        console.log('❌', 'PLAYER', `Caminho não reconhecido: ${musica.caminho}`);
+        throw new Error(`Tipo de áudio não suportado: ${musica.caminho}`);
+      }
+      
+      console.log('✅', 'PLAYER', 'Source configurado corretamente');
+
+      // Configuração de áudio
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: true,
+      });
+
+      console.log('▶️', 'PLAYER', 'Criando instância de áudio...');
+      
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        source,
+        { 
+          shouldPlay: true,
+          isLooping: false
+        }
+      );
+      
+      console.log('✅', 'PLAYER', 'Áudio criado e tocando!');
+      
+      setSound(newSound);
+      setMusicaAtual(musica);
       setTocando(true);
-      console.log('▶️', 'PLAYER', 'Música retomada');
+      setShowPlayerMini(true);
+      
+      // Evento quando a música terminar
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          console.log('🏁', 'PLAYER', 'Música terminou naturalmente');
+          setTocando(false);
+          setMusicaAtual(null);
+          setShowPlayerMini(false);
+        }
+      });
+      
+    } catch (e) {
+      console.log('❌', 'PLAYER', `Erro ao tocar música: ${e.message}`);
+      alert('Erro ao tentar tocar a música: ' + e.message);
     }
     setLoading(false);
-    return;
-  }
-
-  // Para música atual se houver
-  if (sound) {
-    await sound.stopAsync();
-    await sound.unloadAsync();
-    setSound(null);
-    console.log('🛑', 'PLAYER', 'Música anterior parada');
-  }
-
-  try {
-    let source;
-    
-    // 🎯 SISTEMA CORRIGIDO - Mapeamento dos arquivos locais
-    const mapeamentoAudios = {
-      'local_all_night_long': require('../assets/audio/All_Night_Long.mp3'),
-      'local_eu_vou_te_comer_sorrindo': require('../assets/audio/Eu_Vou_Te_Comer_Sorrindo.mp3'),
-      'local_k_o': require('../assets/audio/K.O.mp3'),
-      'local_shut_up_and_listen': require('../assets/audio/Shut_Up_and_Listen.mp3'),
-      'local_sol_loiro': require('../assets/audio/Sol_Loiro.mp3'),
-      'local_bathroom': require('../assets/audio/bathroom.mp3'),
-      'local_flamingos': require('../assets/audio/flamingos.mp3')
-    };
-
-    if (mapeamentoAudios[musica.caminho]) {
-      console.log('📁', 'PLAYER', `Carregando arquivo local: ${musica.caminho}`);
-      source = mapeamentoAudios[musica.caminho];
-    } else if (musica.caminho.startsWith('http') || musica.caminho.startsWith('file://')) {
-      console.log('📱', 'PLAYER', `Carregando arquivo do dispositivo: ${musica.caminho}`);
-      source = { uri: musica.caminho };
-    } else {
-      console.log('❌', 'PLAYER', `Caminho não reconhecido: ${musica.caminho}`);
-      throw new Error(`Tipo de áudio não suportado: ${musica.caminho}`);
-    }
-    
-    console.log('✅', 'PLAYER', 'Source configurado corretamente');
-
-    // Configuração de áudio
-    await Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-      shouldDuckAndroid: true,
-    });
-
-    console.log('▶️', 'PLAYER', 'Criando instância de áudio...');
-    
-    const { sound: newSound } = await Audio.Sound.createAsync(
-      source,
-      { 
-        shouldPlay: true,
-        isLooping: false
-      }
-    );
-    
-    console.log('✅', 'PLAYER', 'Áudio criado e tocando!');
-    
-    setSound(newSound);
-    setMusicaAtual(musica);
-    setTocando(true);
-    setShowPlayerMini(true);
-    
-    // Evento quando a música terminar
-    newSound.setOnPlaybackStatusUpdate((status) => {
-      if (status.didJustFinish) {
-        console.log('🏁', 'PLAYER', 'Música terminou naturalmente');
-        setTocando(false);
-        setMusicaAtual(null);
-        setShowPlayerMini(false);
-      }
-    });
-    
-  } catch (e) {
-    console.log('❌', 'PLAYER', `Erro ao tocar música: ${e.message}`);
-    alert('Erro ao tentar tocar a música: ' + e.message);
-  }
-  setLoading(false);
-};
+  };
 
   const handlePlayPause = async () => {
     if (!sound || !musicaAtual) return;
@@ -611,113 +656,115 @@ const playMusica = async (musica) => {
     }
   };
 
-const toggleFavorito = async (musicaId) => {
-  try {
-    console.log('⭐', 'MÚSICAS', `Alternando favorito para música ID: ${musicaId}`);
-    
-    // ✅ NOVO: Usa o service
-    const result = await musicService.toggleFavorite(musicaId);
-    
-    // ✅ NOVO: Atualiza a lista local com a resposta do servidor
-    const atualizarMusica = (lista) => lista.map(m => 
-      m.id === musicaId ? { ...m, favorita: result.isFavorite } : m
-    );
-    
-    setMusicas(prev => ({
-      preDefinidas: atualizarMusica(prev.preDefinidas),
-      userMusicas: atualizarMusica(prev.userMusicas),
-      favoritas: result.isFavorite 
-        ? [...prev.favoritas, prev.preDefinidas.find(m => m.id === musicaId)].filter(Boolean)
-        : prev.favoritas.filter(m => m.id !== musicaId)
-    }));
-    
-    console.log('✅', 'MÚSICAS', `Favorito atualizado: ${result.isFavorite}`);
-    
-  } catch (e) {
-    console.log('❌', 'MÚSICAS', 'Erro ao favoritar:', e);
-    // Fallback local em caso de erro
-    const atualizarMusica = (lista) => lista.map(m => 
-      m.id === musicaId ? { ...m, favorita: !m.favorita } : m
-    );
-    
-    setMusicas(prev => ({
-      preDefinidas: atualizarMusica(prev.preDefinidas),
-      userMusicas: atualizarMusica(prev.userMusicas),
-      favoritas: prev.favoritas.filter(m => m.id !== musicaId)
-    }));
-  }
-};
-
-  const deletarMusica = async (musicaId) => {
-  try {
-    console.log('🗑️', 'MÚSICAS', `Tentando deletar música ID: ${musicaId}`);
-    
-    // ✅ CORREÇÃO: Remove apenas localmente (não chama API)
-    
-    // Remove da lista local
-    setMusicas(prev => ({
-      ...prev,
-      userMusicas: prev.userMusicas.filter(m => m.id !== musicaId)
-    }));
-    
-    // Se era a música atual, para
-    if (musicaAtual && musicaAtual.id === musicaId) {
-      await stopMusica();
-    }
-    
-    console.log('✅', 'MÚSICAS', `Música deletada localmente ID: ${musicaId}`);
-    
-  } catch (e) {
-    console.log('❌', 'MÚSICAS', 'Erro ao deletar música:', e);
-    // Remove localmente mesmo em caso de erro
-    setMusicas(prev => ({
-      ...prev,
-      userMusicas: prev.userMusicas.filter(m => m.id !== musicaId)
-    }));
-  }
-};
-
-const handleAddLocalMusic = async () => {
-  try {
-    console.log('📁', 'MÚSICAS', 'Iniciando seleção de arquivo...');
-    const result = await DocumentPicker.getDocumentAsync({ 
-      type: 'audio/*',
-      copyToCacheDirectory: true
-    });
-    
-    console.log('📦', 'MÚSICAS', 'Resultado do DocumentPicker:', result);
-    
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const track = result.assets[0];
-      console.log('✅', 'MÚSICAS', `Arquivo selecionado: ${track.name}`);
+  const toggleFavorito = async (musicaId) => {
+    try {
+      console.log('⭐', 'MÚSICAS', `Alternando favorito para música ID: ${musicaId}`);
       
-      // ✅ CORREÇÃO: Salva apenas localmente (não envia para o backend)
-      const novaMusica = {
-        id: Date.now(),
-        nome: track.name || 'Música Local',
-        caminho: track.uri,
-        artista: 'Arquivo Local',
-        duracao: '0:00',
-        favorita: false,
-        pre_definida: false
-      };
+      // ✅ NOVO: Usa o service
+      const result = await musicService.toggleFavorite(musicaId);
+      
+      // ✅ NOVO: Atualiza a lista local com a resposta do servidor
+      const atualizarMusica = (lista) => lista.map(m => 
+        m.id === musicaId ? { ...m, favorita: result.isFavorite } : m
+      );
       
       setMusicas(prev => ({
-        ...prev,
-        userMusicas: [...prev.userMusicas, novaMusica]
+        preDefinidas: atualizarMusica(prev.preDefinidas),
+        userMusicas: atualizarMusica(prev.userMusicas),
+        favoritas: result.isFavorite 
+          ? [...prev.favoritas, prev.preDefinidas.find(m => m.id === musicaId)].filter(Boolean)
+          : prev.favoritas.filter(m => m.id !== musicaId)
       }));
       
-      console.log('✅', 'MÚSICAS', 'Música adicionada localmente');
-      alert('Música adicionada com sucesso!');
+      console.log('✅', 'MÚSICAS', `Favorito atualizado: ${result.isFavorite}`);
       
-    } else {
-      console.log('ℹ️', 'MÚSICAS', 'Seleção de música cancelada');
+    } catch (e) {
+      console.log('❌', 'MÚSICAS', 'Erro ao favoritar:', e);
+      // Fallback local em caso de erro
+      const atualizarMusica = (lista) => lista.map(m => 
+        m.id === musicaId ? { ...m, favorita: !m.favorita } : m
+      );
+      
+      setMusicas(prev => ({
+        preDefinidas: atualizarMusica(prev.preDefinidas),
+        userMusicas: atualizarMusica(prev.userMusicas),
+        favoritas: prev.favoritas.filter(m => m.id !== musicaId)
+      }));
     }
-  } catch (e) {
-    console.log('❌', 'MÚSICAS', 'Erro geral ao selecionar música:', e);
-    alert('Erro ao selecionar música. Tente novamente.');
-  }
-};
+  };
+
+  const deletarMusica = async (musicaId) => {
+    try {
+      console.log('🗑️', 'MÚSICAS', `Tentando deletar música ID: ${musicaId}`);
+      
+      // Remove da lista local
+      setMusicas(prev => ({
+        ...prev,
+        userMusicas: prev.userMusicas.filter(m => m.id !== musicaId)
+      }));
+      
+      // ✅ SALVA NO STORAGE APÓS REMOVER
+      setTimeout(async () => {
+        await salvarMusicasNoStorage();
+      }, 100);
+      
+      // Se era a música atual, para
+      if (musicaAtual && musicaAtual.id === musicaId) {
+        await stopMusica();
+      }
+      
+      console.log('✅', 'MÚSICAS', `Música deletada ID: ${musicaId}`);
+      
+    } catch (e) {
+      console.log('❌', 'MÚSICAS', 'Erro ao deletar música:', e);
+    }
+  };
+
+  const handleAddLocalMusic = async () => {
+    try {
+      console.log('📁', 'MÚSICAS', 'Iniciando seleção de arquivo...');
+      const result = await DocumentPicker.getDocumentAsync({ 
+        type: 'audio/*',
+        copyToCacheDirectory: true
+      });
+      
+      console.log('📦', 'MÚSICAS', 'Resultado do DocumentPicker:', result);
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const track = result.assets[0];
+        console.log('✅', 'MÚSICAS', `Arquivo selecionado: ${track.name}`);
+        
+        // ✅ CORREÇÃO: Salva no AsyncStorage
+        const novaMusica = {
+          id: Date.now().toString(),
+          nome: track.name || 'Música Local',
+          caminho: track.uri,
+          artista: 'Arquivo Local',
+          duracao: '0:00',
+          favorita: false,
+          pre_definida: false
+        };
+        
+        // Salva no estado atual
+        setMusicas(prev => ({
+          ...prev,
+          userMusicas: [...prev.userMusicas, novaMusica]
+        }));
+        
+        // ✅ SALVA NO ASYNCSTORAGE
+        await salvarMusicasNoStorage();
+        
+        console.log('💾', 'MÚSICAS', 'Música salva no AsyncStorage');
+        alert('Música adicionada com sucesso!');
+        
+      } else {
+        console.log('ℹ️', 'MÚSICAS', 'Seleção de música cancelada');
+      }
+    } catch (e) {
+      console.log('❌', 'MÚSICAS', 'Erro geral ao selecionar música:', e);
+      alert('Erro ao selecionar música. Tente novamente.');
+    }
+  };
 
   // === COMPONENTES DE MÚSICA ===
 
