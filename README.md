@@ -1,8 +1,3 @@
-cd backend
-cloudflared tunnel --url http://localhost:3001
-
-cd backend
-node index.js
 
 cd TCC-CODE
 npx expo start --tunnel
