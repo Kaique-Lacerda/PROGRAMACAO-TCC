@@ -1,26 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ImageBackground,
-  Image,
   ScrollView,
   Switch,
   Modal,
-  TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  Dimensions
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Font from 'expo-font';
+// import { Video, ResizeMode } from 'expo-av';
 
 import { BACKEND_URL } from '../constants/config';
 
 export default function Focus() {
   const router = useRouter();
   const [fontsLoaded, setFontsLoaded] = useState(false);
+  const videoRef = useRef(null);
   
   // Estados do foco
   const [tempoFoco, setTempoFoco] = useState(25); // em minutos
@@ -35,6 +36,10 @@ export default function Focus() {
   const [isPausado, setIsPausado] = useState(false);
   const [modoAtual, setModoAtual] = useState('foco'); // 'foco' ou 'descanso'
   const [ciclosCompletos, setCiclosCompletos] = useState(0);
+
+  // Estados da animação
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [animationLoaded, setAnimationLoaded] = useState(false);
 
   // Estados da música
   const [musicaSelecionada, setMusicaSelecionada] = useState(null);
@@ -136,9 +141,17 @@ export default function Focus() {
 
   const handleStart = () => {
     if (!isRunning) {
-      setIsRunning(true);
-      setIsPausado(false);
-      setTempoRestante(modoAtual === 'foco' ? tempoFoco * 60 : tempoDescanso * 60);
+      // Iniciar animação
+      setShowAnimation(true);
+      setAnimationLoaded(false);
+      
+      // Após a animação, iniciar o timer
+      setTimeout(() => {
+        setIsRunning(true);
+        setIsPausado(false);
+        setTempoRestante(modoAtual === 'foco' ? tempoFoco * 60 : tempoDescanso * 60);
+        setShowAnimation(false);
+      }, 6000); // 6 segundos da animação
     }
   };
 
@@ -151,6 +164,7 @@ export default function Focus() {
     setIsPausado(false);
     setTempoRestante(tempoFoco * 60);
     setModoAtual('foco');
+    setShowAnimation(false);
   };
 
   const handleTimerCompleto = () => {
@@ -161,12 +175,32 @@ export default function Focus() {
       setModoAtual('descanso');
       setTempoRestante(tempoDescanso * 60);
       setCiclosCompletos(ciclosCompletos + 1);
-      // Aqui você pode adicionar notificação/som de término
     } else {
       setModoAtual('foco');
       setTempoRestante(tempoFoco * 60);
-      // Aqui você pode adicionar notificação/som de término do descanso
     }
+  };
+
+const handleAnimationLoad = () => {
+  setAnimationLoaded(true);
+  // Inicia animação alternativa imediatamente
+  Animated.parallel([
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }),
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }),
+  ]).start();
+};
+
+  const handleAnimationEnd = () => {
+    // A animação termina automaticamente após 6 segundos
+    // O timeout no handleStart já cuida da transição
   };
 
   const formatarTempo = (segundos) => {
@@ -212,6 +246,72 @@ export default function Focus() {
       resizeMode="cover"
       style={styles.background}
     >
+      {/* Overlay da Animação */}
+      {showAnimation && (
+        <View style={styles.animationOverlay}>
+          <View style={styles.animationContainer}>
+            {!animationLoaded && (
+              <View style={styles.animationLoading}>
+                <ActivityIndicator size="large" color="#ffb300" />
+                <Text style={styles.animationLoadingText}>Carregando animação...</Text>
+              </View>
+            )}
+
+
+
+
+
+
+
+
+
+          <View style={styles.animationPlaceholder}>
+          <Text style={styles.animationPlaceholderText}>🎬</Text>
+          <Text style={styles.animationPlaceholderSubtext}>Animação de Foco</Text>
+         </View>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+           {/*
+            <Video
+              ref={videoRef}
+              source={require('../assets/animations/focus-start.mp4')} // Você vai criar este arquivo
+              style={styles.animationVideo}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay
+              isLooping={false}
+              onLoad={handleAnimationLoad}
+              onPlaybackStatusUpdate={(status) => {
+                if (status.didJustFinish) {
+                  handleAnimationEnd();
+                }
+              }}
+            />
+            */}
+
+            <Text style={styles.animationText}>Preparando ambiente de foco...</Text>
+          </View>
+        </View>
+      )}
+
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         
         {/* Header */}
@@ -223,17 +323,19 @@ export default function Focus() {
         </View>
 
         <View style={styles.content}>
-          {/* Personagem no lado esquerdo */}
-          <View style={styles.personagemContainer}>
-            <Image 
-              source={require('../assets/images/batata-doce.png')}
-              style={styles.personagem}
-            />
+          {/* Área do Status (onde estava a imagem) */}
+          <View style={styles.statusArea}>
             <View style={styles.statusContainer}>
+              <Text style={styles.statusIcon}>
+                {isRunning 
+                  ? (isPausado ? '⏸️' : modoAtual === 'foco' ? '🎯' : '☕')
+                  : '💤'
+                }
+              </Text>
               <Text style={styles.statusText}>
                 {isRunning 
-                  ? (isPausado ? '⏸️ Pausado' : modoAtual === 'foco' ? '🎯 Focando...' : '☕ Descansando...')
-                  : '💤 Pronto para começar'
+                  ? (isPausado ? 'Pausado' : modoAtual === 'foco' ? 'Focando...' : 'Descansando...')
+                  : 'Pronto para começar'
                 }
               </Text>
               <Text style={styles.ciclosText}>
@@ -256,8 +358,14 @@ export default function Focus() {
               
               <View style={styles.timerControls}>
                 {!isRunning ? (
-                  <TouchableOpacity style={styles.startButton} onPress={handleStart}>
-                    <Text style={styles.startButtonText}>▶️ Start</Text>
+                  <TouchableOpacity 
+                    style={styles.startButton} 
+                    onPress={handleStart}
+                    disabled={showAnimation}
+                  >
+                    <Text style={styles.startButtonText}>
+                      {showAnimation ? '🎬 Iniciando...' : '▶️ Start'}
+                    </Text>
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.runningControls}>
@@ -285,6 +393,7 @@ export default function Focus() {
                   <TouchableOpacity 
                     style={styles.timeButton}
                     onPress={() => setTempoFoco(Math.max(1, tempoFoco - 5))}
+                    disabled={isRunning}
                   >
                     <Text style={styles.timeButtonText}>-5</Text>
                   </TouchableOpacity>
@@ -292,6 +401,7 @@ export default function Focus() {
                   <TouchableOpacity 
                     style={styles.timeButton}
                     onPress={() => setTempoFoco(tempoFoco + 5)}
+                    disabled={isRunning}
                   >
                     <Text style={styles.timeButtonText}>+5</Text>
                   </TouchableOpacity>
@@ -305,6 +415,7 @@ export default function Focus() {
                   <TouchableOpacity 
                     style={styles.timeButton}
                     onPress={() => setTempoDescanso(Math.max(1, tempoDescanso - 1))}
+                    disabled={isRunning}
                   >
                     <Text style={styles.timeButtonText}>-1</Text>
                   </TouchableOpacity>
@@ -312,6 +423,7 @@ export default function Focus() {
                   <TouchableOpacity 
                     style={styles.timeButton}
                     onPress={() => setTempoDescanso(tempoDescanso + 1)}
+                    disabled={isRunning}
                   >
                     <Text style={styles.timeButtonText}>+1</Text>
                   </TouchableOpacity>
@@ -327,12 +439,14 @@ export default function Focus() {
                     onValueChange={setMusicaAtivada}
                     trackColor={{ false: '#767577', true: '#ffb300' }}
                     thumbColor={musicaAtivada ? '#fff' : '#f4f3f4'}
+                    disabled={isRunning}
                   />
                 </View>
                 {musicaAtivada && (
                   <TouchableOpacity 
                     style={styles.musicSelectButton}
                     onPress={() => setShowMusicModal(true)}
+                    disabled={isRunning}
                   >
                     <Text style={styles.musicSelectText}>
                       {musicaSelecionada ? `🎵 ${musicaSelecionada.nome}` : 'Selecionar Música'}
@@ -381,6 +495,7 @@ export default function Focus() {
                 <TouchableOpacity 
                   style={[styles.saveButton, configSalva && styles.saveButtonSuccess]}
                   onPress={salvarConfiguracao}
+                  disabled={isRunning}
                 >
                   <Text style={styles.saveButtonText}>
                     {configSalva ? '✅ Salvo!' : '💾 Salvar Configuração'}
@@ -404,7 +519,6 @@ export default function Focus() {
             <Text style={styles.modalTitle}>Selecionar Música</Text>
             <Text style={styles.modalSubtitle}>Escolha uma música para tocar durante o foco</Text>
             
-            {/* Aqui você pode integrar com sua biblioteca de músicas existente */}
             <View style={styles.musicList}>
               <TouchableOpacity style={styles.musicItem}>
                 <Text style={styles.musicItemText}>🎵 Música Relaxante</Text>
@@ -477,58 +591,101 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // layout principal: personagem + menu (direita) mais compacto
+  // Layout principal
   content: {
     flexDirection: 'row',
     flex: 1,
     alignItems: 'flex-start',
   },
-  personagemContainer: {
+  statusArea: {
     flex: 1,
     alignItems: 'center',
-    marginRight: 12, // reduzir espaço entre colunas
+    marginRight: 12,
+    justifyContent: 'center',
   },
-  personagem: {
-    width: 120, // reduzir tamanho da imagem para liberar espaço
-    height: 120,
-    borderRadius: 60,
+  statusContainer: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    padding: 20,
     borderWidth: 2,
     borderColor: '#ffb300',
+    minHeight: 150,
+    justifyContent: 'center',
   },
-
-  statusContainer: {
-    marginTop: 14,
-    alignItems: 'center',
+  statusIcon: {
+    fontSize: 40,
+    marginBottom: 10,
   },
   statusText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   ciclosText: {
     color: '#ccc',
-    fontSize: 13,
+    fontSize: 14,
     textAlign: 'center',
   },
 
-  // OPÇÕES (direita) mais enxuto: limitar largura e ajustar paddings/ fontes
+  // Animação
+  animationOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    zIndex: 1000,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  animationContainer: {
+    width: '80%',
+    height: '60%',
+    alignItems: 'center',
+  },
+  animationVideo: {
+    width: '100%',
+    height: '70%',
+    borderRadius: 20,
+  },
+  animationText: {
+    color: '#ffb300',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  animationLoading: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '70%',
+  },
+  animationLoadingText: {
+    color: '#fff',
+    marginTop: 10,
+    fontSize: 16,
+  },
+
+  // OPÇÕES (direita)
   opcoesContainer: {
     flex: 1,
-    maxWidth: 420, // limite para evitar ocupar toda a tela
+    maxWidth: 420,
   },
   timerContainer: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 14,
-    padding: 16, // reduzir padding
+    padding: 16,
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 2,
     borderColor: '#ffb300',
   },
   timerText: {
-    fontSize: 36, // reduzir fonte do timer
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 8,
@@ -586,7 +743,7 @@ const styles = StyleSheet.create({
   configSection: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
-    padding: 12, // reduzir padding
+    padding: 12,
   },
   sectionTitle: {
     fontSize: 18,
