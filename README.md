@@ -1,4 +1,3 @@
-
 cd TCC-CODE
 npx expo start --tunnel
 
