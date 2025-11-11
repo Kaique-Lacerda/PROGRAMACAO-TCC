@@ -1,3 +1,4 @@
+// backend/src/middleware/auth.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
@@ -17,6 +18,7 @@ const auth = async (req, res, next) => {
     }
 
     req.user = user;
+    req.userId = decoded.userId; // ← ADICIONE ESTA LINHA!
     next();
   } catch (error) {
     res.status(401).json({ error: 'Token inválido.' });
