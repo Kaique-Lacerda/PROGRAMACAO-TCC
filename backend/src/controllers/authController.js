@@ -98,7 +98,7 @@ exports.getMe = async (req, res) => {
 exports.updateProfileImage = async (req, res) => {
   try {
     const { profileImage } = req.body;
-    const userId = req.userId;
+    const userId = req.user._id;
 
     const user = await User.findByIdAndUpdate(
       userId,
