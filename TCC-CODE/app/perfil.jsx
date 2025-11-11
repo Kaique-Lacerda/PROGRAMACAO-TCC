@@ -8,13 +8,12 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
-  Alert,
-  Modal,
-  TextInput
+  Alert
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Font from 'expo-font';
+import * as ImagePicker from 'expo-image-picker';
 
 import { BACKEND_URL } from '../constants/config';
 
@@ -23,14 +22,7 @@ export default function Perfil() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [stats, setStats] = useState({
-    tempoFoco: '0h 0min',
-    sessoesCompletas: 0,
-    musicasFavoritas: 0,
-    nivel: 'Iniciante'
-  });
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editUsername, setEditUsername] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
 
   // Carregar fontes
   useEffect(() => {
@@ -43,13 +35,69 @@ export default function Perfil() {
     loadFonts();
   }, []);
 
-  // Carregar dados do usuário
+  // Carregar dados do usuário e foto salva
   useEffect(() => {
     if (fontsLoaded) {
       loadUserData();
-      loadUserStats();
     }
   }, [fontsLoaded]);
+
+const saveProfileImageToBackend = async (imageUri) => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    console.log('🔗 Tentando salvar foto no backend...');
+    console.log('📎 Token existe?', !!token);
+    console.log('🖼️ Image URI:', imageUri ? `Presente (${imageUri.substring(0, 50)}...)` : 'Faltando');
+    console.log('🌐 URL:', `${BACKEND_URL}/auth/profile-image`);
+    
+    const res = await fetch(`${BACKEND_URL}/auth/profile-image`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ profileImage: imageUri })
+    });
+
+    console.log('📥 Status da resposta:', res.status);
+    console.log('📥 Resposta OK?', res.ok);
+    
+    const responseText = await res.text();
+    console.log('📥 Resposta completa:', responseText);
+    
+    if (res.ok) {
+      console.log('✅ Foto salva no MongoDB com sucesso!');
+    } else {
+      console.log('❌ Erro HTTP:', res.status, responseText);
+    }
+  } catch (error) {
+    console.log('❌ Erro de conexão:', error.message);
+  }
+};
+
+  // Salvar foto localmente e no backend
+  const saveProfileImage = async (imageUri) => {
+    try {
+      await AsyncStorage.setItem('profileImage', imageUri);
+      setProfileImage(imageUri);
+      // Salva também no MongoDB
+      await saveProfileImageToBackend(imageUri);
+    } catch (error) {
+      console.log('❌ Erro ao salvar foto:', error);
+    }
+  };
+
+  // Carregar foto salva do AsyncStorage
+  const loadSavedProfileImage = async () => {
+    try {
+      const savedImage = await AsyncStorage.getItem('profileImage');
+      if (savedImage) {
+        setProfileImage(savedImage);
+      }
+    } catch (error) {
+      console.log('❌ Erro ao carregar foto:', error);
+    }
+  };
 
   const loadUserData = async () => {
     try {
@@ -59,7 +107,7 @@ export default function Perfil() {
         return;
       }
 
-      // Buscar dados do usuário do backend
+      // Buscar dados reais do usuário do backend/MongoDB
       const res = await fetch(`${BACKEND_URL}/auth/me`, {
         headers: {
           'Authorization': token,
@@ -68,65 +116,79 @@ export default function Perfil() {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setUserData(data);
+        const userDataFromAPI = await res.json();
+        console.log('📊 Dados do usuário:', userDataFromAPI);
+        
+        // Pega o name do user
+        setUserData({
+          username: userDataFromAPI.user.name,
+          memberSince: new Date(userDataFromAPI.user.createdAt || Date.now()).toLocaleDateString('pt-BR')
+        });
+
+        // Carrega foto do MongoDB se existir, senão carrega do localStorage
+        if (userDataFromAPI.user.profileImage) {
+          setProfileImage(userDataFromAPI.user.profileImage);
+        } else {
+          loadSavedProfileImage();
+        }
       } else {
-        // Fallback: usar dados básicos do token
+        // Fallback: tentar pegar do token
         const tokenData = JSON.parse(atob(token.split('.')[1]));
         setUserData({
-          username: tokenData.username,
+          username: tokenData.name || 'Usuário',
           memberSince: new Date().toLocaleDateString('pt-BR')
         });
+        loadSavedProfileImage();
       }
     } catch (error) {
-      console.log('Erro ao carregar perfil:', error);
+      console.log('❌ Erro ao carregar perfil:', error);
       // Fallback em caso de erro
       const token = await AsyncStorage.getItem('token');
       if (token) {
-        const tokenData = JSON.parse(atob(token.split('.')[1]));
-        setUserData({
-          username: tokenData.username,
-          memberSince: new Date().toLocaleDateString('pt-BR')
-        });
+        try {
+          const tokenData = JSON.parse(atob(token.split('.')[1]));
+          setUserData({
+            username: tokenData.name || 'Usuário',
+            memberSince: new Date().toLocaleDateString('pt-BR')
+          });
+        } catch {
+          setUserData({
+            username: 'Usuário',
+            memberSince: new Date().toLocaleDateString('pt-BR')
+          });
+        }
       }
+      loadSavedProfileImage();
     } finally {
       setLoading(false);
     }
   };
 
-  const loadUserStats = async () => {
+  const pickImage = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      
-      // Buscar estatísticas (você pode criar essa rota no backend depois)
-      const statsRes = await fetch(`${BACKEND_URL}/user/stats`, {
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
+      // Pedir permissão
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão necessária', 'Precisamos de acesso à galeria para alterar a foto.');
+        return;
+      }
+
+      // Abrir seletor de imagem
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
       });
 
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      } else {
-        // Estatísticas mock para desenvolvimento
-        setStats({
-          tempoFoco: '12h 45min',
-          sessoesCompletas: 23,
-          musicasFavoritas: 5,
-          nivel: 'Produtivo 🚀'
-        });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const selectedImage = result.assets[0].uri;
+        await saveProfileImage(selectedImage);
+        Alert.alert('✅ Sucesso', 'Foto de perfil atualizada!');
       }
     } catch (error) {
-      console.log('Erro ao carregar estatísticas:', error);
-      // Estatísticas mock em caso de erro
-      setStats({
-        tempoFoco: '8h 30min',
-        sessoesCompletas: 15,
-        musicasFavoritas: 3,
-        nivel: 'Em Progresso 📈'
-      });
+      console.log('❌ Erro ao selecionar imagem:', error);
+      Alert.alert('❌ Erro', 'Não foi possível selecionar a imagem.');
     }
   };
 
@@ -141,40 +203,12 @@ export default function Perfil() {
           style: 'destructive',
           onPress: async () => {
             await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('profileImage'); // Limpa a foto ao sair
             router.replace('/login');
           }
         }
       ]
     );
-  };
-
-  const handleEditProfile = async () => {
-    if (!editUsername.trim()) {
-      Alert.alert('Erro', 'Nome de usuário não pode estar vazio');
-      return;
-    }
-
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${BACKEND_URL}/auth/me`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username: editUsername })
-      });
-
-      if (res.ok) {
-        setUserData(prev => ({ ...prev, username: editUsername }));
-        setShowEditModal(false);
-        Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
-      } else {
-        Alert.alert('Erro', 'Não foi possível atualizar o perfil');
-      }
-    } catch (error) {
-      Alert.alert('Erro', 'Erro ao atualizar perfil');
-    }
   };
 
   const StatCard = ({ title, value, icon }) => (
@@ -194,7 +228,7 @@ export default function Perfil() {
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#ffb300" />
-          <Text style={styles.loadingText}>Carregando perfil...</Text>
+          <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       </ImageBackground>
     );
@@ -208,110 +242,60 @@ export default function Perfil() {
     >
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         
-        {/* Header */}
+        {/* Header Simples */}
         <View style={styles.header}>
-          <Text style={styles.title}>Perfil</Text>
+          <Text style={styles.title}>Meu Perfil</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>‹ Voltar</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Card do Perfil */}
+        {/* Card do Perfil Simplificado */}
         <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            onPress={pickImage}
+          >
             <Image 
-              source={require('../assets/images/icons/perfil.png')}
+              source={profileImage ? { uri: profileImage } : require('../assets/images/icons/perfil.png')}
               style={styles.avatar}
             />
-            <View style={styles.onlineIndicator} />
-          </View>
+            <View style={styles.cameraIcon}>
+              <Text style={styles.cameraIconText}>📷</Text>
+            </View>
+          </TouchableOpacity>
           
           <Text style={styles.username}>{userData?.username || 'Usuário'}</Text>
           <Text style={styles.memberSince}>
-            Membro desde: {userData?.memberSince || 'Data não disponível'}
+            Membro desde {userData?.memberSince}
           </Text>
           
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>{stats.nivel}</Text>
-          </View>
-
-          <View style={styles.profileActions}>
-            <TouchableOpacity 
-              style={styles.editButton}
-              onPress={() => {
-                setEditUsername(userData?.username || '');
-                setShowEditModal(true);
-              }}
-            >
-              <Text style={styles.editButtonText}>✏️ Editar Perfil</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.changePhotoButton} onPress={pickImage}>
+            <Text style={styles.changePhotoText}>Alterar Foto</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Estatísticas */}
+        {/* Estatísticas Essenciais */}
         <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Estatísticas</Text>
+          <Text style={styles.sectionTitle}>Resumo</Text>
           <View style={styles.statsGrid}>
             <StatCard 
-              title="Tempo de Foco" 
-              value={stats.tempoFoco} 
+              title="Tempo Foco" 
+              value="12h 45min" 
               icon="⏱️" 
             />
             <StatCard 
               title="Sessões" 
-              value={stats.sessoesCompletas} 
+              value="23" 
               icon="🎯" 
             />
-            <StatCard 
-              title="Músicas Fav" 
-              value={stats.musicasFavoritas} 
-              icon="🎵" 
-            />
-            <StatCard 
-              title="Conquistas" 
-              value="3" 
-              icon="🏆" 
-            />
           </View>
         </View>
 
-        {/* Conquistas */}
-        <View style={styles.achievementsSection}>
-          <Text style={styles.sectionTitle}>Conquistas</Text>
-          <View style={styles.achievementsList}>
-            <View style={styles.achievementItem}>
-              <Text style={styles.achievementIcon}>🔥</Text>
-              <View style={styles.achievementInfo}>
-                <Text style={styles.achievementTitle}>Primeira Sessão</Text>
-                <Text style={styles.achievementDesc}>Complete sua primeira sessão de foco</Text>
-              </View>
-              <Text style={styles.achievementStatus}>✅</Text>
-            </View>
-            
-            <View style={styles.achievementItem}>
-              <Text style={styles.achievementIcon}>🎵</Text>
-              <View style={styles.achievementInfo}>
-                <Text style={styles.achievementTitle}>Ouvinte</Text>
-                <Text style={styles.achievementDesc}>Ouça 5 músicas diferentes</Text>
-              </View>
-              <Text style={styles.achievementStatus}>🔄</Text>
-            </View>
-            
-            <View style={styles.achievementItem}>
-              <Text style={styles.achievementIcon}>⏰</Text>
-              <View style={styles.achievementInfo}>
-                <Text style={styles.achievementTitle}>Maratonista</Text>
-                <Text style={styles.achievementDesc}>10 horas de foco total</Text>
-              </View>
-              <Text style={styles.achievementStatus}>🔄</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Ações */}
+        {/* Ações Principais */}
         <View style={styles.actionsSection}>
           <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>📊 Ver Estatísticas Detalhadas</Text>
+            <Text style={styles.actionButtonText}>🎵 Músicas Favoritas</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton}>
@@ -322,50 +306,11 @@ export default function Perfil() {
             style={[styles.actionButton, styles.logoutButton]}
             onPress={handleLogout}
           >
-            <Text style={[styles.actionButtonText, styles.logoutButtonText]}>🚪 Sair</Text>
+            <Text style={[styles.actionButtonText, styles.logoutButtonText]}>🚪 Sair da Conta</Text>
           </TouchableOpacity>
         </View>
 
       </ScrollView>
-
-      {/* Modal de Edição */}
-      <Modal
-        visible={showEditModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowEditModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Editar Perfil</Text>
-            
-            <Text style={styles.modalLabel}>Nome de Usuário</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={editUsername}
-              onChangeText={setEditUsername}
-              placeholder="Novo nome de usuário"
-              placeholderTextColor="#999"
-            />
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowEditModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={handleEditProfile}
-              >
-                <Text style={styles.saveButtonText}>Salvar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </ImageBackground>
   );
 }
@@ -423,26 +368,31 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,179,0,0.3)',
   },
   avatarContainer: {
-    position: 'relative',
     marginBottom: 15,
+    position: 'relative',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     borderWidth: 3,
     borderColor: '#ffb300',
   },
-  onlineIndicator: {
+  cameraIcon: {
     position: 'absolute',
     bottom: 5,
     right: 5,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#ffb300',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 2,
     borderColor: '#fff',
+  },
+  cameraIconText: {
+    fontSize: 14,
   },
   username: {
     fontSize: 24,
@@ -452,34 +402,21 @@ const styles = StyleSheet.create({
   },
   memberSince: {
     color: '#ccc',
+    fontSize: 14,
     marginBottom: 15,
   },
-  levelBadge: {
-    backgroundColor: '#ffb300',
-    paddingHorizontal: 15,
-    paddingVertical: 5,
-    borderRadius: 15,
-    marginBottom: 20,
-  },
-  levelText: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  profileActions: {
-    width: '100%',
-  },
-  editButton: {
+  changePhotoButton: {
     backgroundColor: 'rgba(255,179,0,0.2)',
-    padding: 12,
-    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#ffb300',
-    alignItems: 'center',
   },
-  editButtonText: {
+  changePhotoText: {
     color: '#ffb300',
     fontWeight: 'bold',
+    fontSize: 12,
   },
   statsSection: {
     marginBottom: 25,
@@ -492,16 +429,15 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   statCard: {
-    width: '48%',
+    flex: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 15,
     padding: 15,
     alignItems: 'center',
-    marginBottom: 10,
+    marginHorizontal: 5,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
@@ -519,40 +455,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ccc',
     textAlign: 'center',
-  },
-  achievementsSection: {
-    marginBottom: 25,
-  },
-  achievementsList: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 15,
-    padding: 15,
-  },
-  achievementItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  achievementIcon: {
-    fontSize: 20,
-    marginRight: 15,
-  },
-  achievementInfo: {
-    flex: 1,
-  },
-  achievementTitle: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  achievementDesc: {
-    color: '#ccc',
-    fontSize: 12,
-  },
-  achievementStatus: {
-    fontSize: 16,
   },
   actionsSection: {
     marginBottom: 50,
@@ -576,68 +478,5 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     color: '#dc3545',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-    padding: 25,
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 2,
-    borderColor: '#ffb300',
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffb300',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalLabel: {
-    color: '#fff',
-    marginBottom: 8,
-    fontWeight: 'bold',
-  },
-  modalInput: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1,
-    borderColor: '#ffb300',
-    borderRadius: 10,
-    padding: 15,
-    color: '#fff',
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  cancelButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  saveButton: {
-    backgroundColor: '#ffb300',
-  },
-  cancelButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  saveButtonText: {
-    color: '#000',
-    fontWeight: 'bold',
   },
 });

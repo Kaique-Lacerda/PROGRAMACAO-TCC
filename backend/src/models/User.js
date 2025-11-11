@@ -21,6 +21,10 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Senha é obrigatória'],
     minlength: [6, 'Senha deve ter pelo menos 6 caracteres'],
     select: false
+  },
+  profileImage: {
+    type: String,
+    default: null // Será uma URL ou base64 da imagem
   }
 }, {
   timestamps: true

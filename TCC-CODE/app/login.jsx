@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router'; // ← ADICIONA ESTA IMPORT
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Font from 'expo-font';
 
 // ✅ URL do backend
 import { BACKEND_URL } from '../constants/config';
 
-export default function Login({ onLogin }) {
+export default function Login() { // ← REMOVE { onLogin } daqui
+  const router = useRouter(); // ← ADICIONA ESTA LINHA
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -89,8 +91,8 @@ const handleSubmit = async () => {
       console.log('✅ Login bem-sucedido, salvando token...');
       await AsyncStorage.setItem('token', data.token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-      console.log('✅ Token salvo, chamando onLogin...');
-      onLogin(data.token);
+      console.log('✅ Token salvo, redirecionando...');
+      router.replace('/'); // ← TROCA onLogin(data.token) POR ISTO
     }
   } catch (err) {
     console.error('💥 Erro completo no login:', err);

@@ -31,7 +31,8 @@ exports.register = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        profileImage: user.profileImage
       }
     });
 
@@ -66,7 +67,8 @@ exports.login = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        profileImage: user.profileImage
       }
     });
 
@@ -82,10 +84,42 @@ exports.getMe = async (req, res) => {
       user: {
         id: req.user._id,
         name: req.user.name,
-        email: req.user.email
+        email: req.user.email,
+        profileImage: req.user.profileImage,
+        createdAt: req.user.createdAt
       }
     });
   } catch (error) {
     res.status(500).json({ error: 'Erro no servidor.' });
+  }
+};
+
+// Atualizar foto de perfil
+exports.updateProfileImage = async (req, res) => {
+  try {
+    const { profileImage } = req.body;
+    const userId = req.userId;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { profileImage },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    res.json({ 
+      message: 'Foto de perfil atualizada com sucesso',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImage
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar foto de perfil' });
   }
 };
