@@ -1,3 +1,4 @@
+// TCC-CODE/app/features/navigation/NavigationButtons.jsx
 import React, { useState } from 'react';
 import {
   View,
@@ -9,17 +10,31 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CharacterCustomization } from '../character-customization';
-import { CharacterPreview } from '../character-customization/components/CharacterPreview';
 import { useCharacterCustomization } from '../character-customization/hooks/useCharacterCustomization';
+import { getCharacterImage } from '../character-customization/utils/characterAssets';
 
 const NavigationButtons = ({ onOpenMusic }) => {
   const router = useRouter();
   const [showCustomization, setShowCustomization] = useState(false);
-  const { character } = useCharacterCustomization();
+  
+  const { character, updateCharacter, resetCharacter } = useCharacterCustomization();
+
+  const getMiniCharacterLayers = () => {
+    if (!character) return [];
+    
+    return [
+      getCharacterImage('skin', character.skin),
+      getCharacterImage('shirt', character.shirt),
+      getCharacterImage('dress', character.dress),
+      getCharacterImage('socks', character.socks),
+      getCharacterImage('hair', character.hair),
+      getCharacterImage('eyes', character.eyes),
+    ].filter(Boolean);
+  };
 
   return (
     <View style={styles.navigationContainer}>
-      {/* Botão Abrir Música */}
+      {/* BOTÃO MÚSICA (VISÍVEL) */}
       <TouchableOpacity
         style={styles.musicToggleHitbox}
         activeOpacity={0.8}
@@ -35,54 +50,41 @@ const NavigationButtons = ({ onOpenMusic }) => {
         </Text>
       </TouchableOpacity>
 
-      {/* Área do personagem */}
+      {/* BOTÃO PERSONAGEM/CRONÔMETRO (VISÍVEL) */}
       <TouchableOpacity
         style={styles.personHitbox}
         activeOpacity={0.85}
         onPress={() => router.push('/cronometro')}
-        accessibilityLabel="Área do personagem"
       >
-        <Image
-          source={require('../../../assets/images/elementos.png')}
-          style={styles.personImage}
-          resizeMode="contain"
-        />
+        <Text style={styles.debugText}>👤 Cronômetro</Text>
       </TouchableOpacity>
 
-      {/* Personagem Customizada no lugar do botão Focus */}
+      {/* PERSONAGEM = BOTÃO FOCUS (VISÍVEL) */}
       <TouchableOpacity
         style={styles.characterHitbox}
         activeOpacity={0.8}
-        onPress={() => setShowCustomization(true)}
+        onPress={() => router.push('/focus')}
       >
         <View style={styles.characterContainer}>
-          {/* Mini preview da personagem customizada */}
+          {/* Mini preview da personagem */}
           <View style={styles.miniCharacter}>
-            <Image 
-              source={require('../../../assets/images/character-customization/shirt/default.png')}
-              style={styles.miniLayer}
-            />
-            <Image 
-              source={require('../../../assets/images/character-customization/dress/default.png')}
-              style={styles.miniLayer}
-            />
-            <Image 
-              source={require('../../../assets/images/character-customization/socks/default.png')}
-              style={styles.miniLayer}
-            />
-            <Image 
-              source={require('../../../assets/images/character-customization/hair/default.png')}
-              style={styles.miniLayer}
-            />
-            <Image 
-              source={require('../../../assets/images/character-customization/eyes/default.png')}
-              style={styles.miniLayer}
-            />
+            {getMiniCharacterLayers().map((imageSource, index) => (
+              <Image 
+                key={index}
+                source={imageSource}
+                style={styles.miniLayer}
+              />
+            ))}
           </View>
-          <Text style={styles.characterText}>
-            Personalizar{'\n'}Personagem
-          </Text>
         </View>
+      </TouchableOpacity>
+
+      {/* BOTÃO PERSONALIZAR (VISÍVEL) */}
+      <TouchableOpacity
+        style={styles.customizeButton}
+        activeOpacity={0.8}
+        onPress={() => setShowCustomization(true)}
+      >
       </TouchableOpacity>
 
       {/* Modal de Personalização */}
@@ -102,7 +104,11 @@ const NavigationButtons = ({ onOpenMusic }) => {
               <Text style={styles.closeButtonText}>X</Text>
             </TouchableOpacity>
           </View>
-          <CharacterCustomization />
+          <CharacterCustomization 
+            character={character}
+            onUpdate={updateCharacter}
+            onReset={resetCharacter}
+          />
         </View>
       </Modal>
 
@@ -125,69 +131,81 @@ const styles = StyleSheet.create({
     marginTop: 0,
     marginBottom: 0,
   },
+  // BOTÃO MÚSICA - VERDE
   musicToggleHitbox: {
     position: 'absolute',
-    width: 120,
-    height: 80,
-    right: '10%',
-    top: '35%',
-    borderWidth: 2,
-    borderColor: '#ffb300',
+    width: 150,
+    height: 100,
+    right: '2%',
+    top: '41%',
+    borderWidth: 3,
+    borderColor: '#00ff00',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,179,0,0.06)',
+    backgroundColor: 'rgba(0,255,0,0.2)',
     zIndex: 15,
     padding: 4,
   },
+  // BOTÃO PERSONAGEM/CRONÔMETRO - AZUL
   personHitbox: {
     position: 'absolute',
-    width: 120,
-    height: 250,
-    left: '5%',
-    top: '35%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 15,
-    padding: 8,
-  },
-  personImage: {
-    width: '100%',
-    height: '100%',
-    alignSelf: 'center',
-  },
-  // NOVO: Container da personagem customizada
-  characterHitbox: {
-    position: 'absolute',
     width: 200,
-    height: 400,
-    left: '45%',
-    bottom: '5%',
-    borderWidth: 2,
-    borderColor: '#ffb300',
+    height: 320,
+    left: '2%',
+    top: '26%',
+    borderWidth: 3,
+    borderColor: '#0066ff',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,179,0,0.06)',
+    backgroundColor: 'rgba(0,102,255,0.2)',
     zIndex: 15,
     padding: 8,
+  },
+  // PERSONAGEM = BOTÃO FOCUS - VERMELHO
+  characterHitbox: {
+    position: 'absolute',
+    width: 200,
+    height: 350,
+    right: '2%',
+    bottom: '5%',
+    borderWidth: 3,
+    borderColor: '#ff0000',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,0,0,0.2)',
+    zIndex: 13,
   },
   characterContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  // BOTÃO PERSONALIZAR - AMARELO
+  customizeButton: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    left: '2%',
+    top: '5%',
+    borderWidth: 3,
+    borderColor: '#ffff00',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,0,0.2)',
+    zIndex: 15,
+    padding: 8,
+  },
   miniCharacter: {
-    width: 1700,
-    height: 1700,
+    width: 300,
+    height: 300,
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
-     transform: [
-    { translateX: -75 }, // Move para a esquerda
-    { translateY: -150 }  // Move para cima
-     ]
   },
   miniLayer: {
     position: 'absolute',
@@ -195,17 +213,21 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'contain'
   },
-  characterText: {
-    color: '#ffb300',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    fontSize: 12,
-  },
   navButtonText: {
     color: '#ffb300',
     fontWeight: 'bold',
     textAlign: 'center',
     fontSize: 12,
+  },
+  // TEXTO DEBUG PARA IDENTIFICAR CADA BOTÃO
+  debugText: {
+    color: '#000',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    fontSize: 12,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    padding: 4,
+    borderRadius: 4,
   },
   hamburger: {
     position: 'absolute',

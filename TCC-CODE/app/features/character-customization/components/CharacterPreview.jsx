@@ -1,73 +1,49 @@
 // TCC-CODE/app/features/character-customization/components/CharacterPreview.jsx
 import React from 'react';
-import { View, Image, Text, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
+import { getCharacterImage } from '../utils/characterAssets';
 
 export const CharacterPreview = ({ character }) => {
-  const getImageSource = (category, value) => {
-    // Mapeamento direto para require - só as versões default que existem
-    const imageMap = {
-      // Shirt
-      'shirt.default': require('../../../../assets/images/character-customization/shirt/default.png'),
-
-      // Dress
-      'dress.default': require('../../../../assets/images/character-customization/dress/default.png'),
-
-      // Eyes
-      'eyes.default': require('../../../../assets/images/character-customization/eyes/default.png'),
-
-      // Hair - só o default
-      'hair.default': require('../../../../assets/images/character-customization/hair/default.png'),
-
-      // Socks - só a versão default que existe
-      'socks.thigh-high.default': require('../../../../assets/images/character-customization/socks/default.png'),
-    };
-
-    const key = `${category}.${value}`;
-    return imageMap[key];
-  };
+  // Proteção contra character undefined
+  if (!character) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.layerContainer}>
+          <Text style={styles.errorText}>Personagem não carregada</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Preview da Personagem</Text>
-      
       <View style={styles.layerContainer}>
-        {/* Debug center marker */}
-        <View style={styles.debugCenter}>
-          <View style={styles.centerDot} />
-        </View>
-
-        {/* Render cada camada - só as que temos arquivos */}
+        {/* Render cada camada na ordem correta - SEM ANIMAÇÃO */}
         <Image 
-          source={getImageSource('shirt', character.shirt)} 
+          source={getCharacterImage('skin', character.skin)} 
           style={styles.layer}
-          onError={(e) => console.log('❌ Erro shirt')}
         />
         <Image 
-          source={getImageSource('dress', character.dress)} 
+          source={getCharacterImage('shirt', character.shirt)} 
           style={styles.layer}
-          onError={(e) => console.log('❌ Erro dress')}
         />
         <Image 
-          source={getImageSource('socks', character.socks.type)} 
+          source={getCharacterImage('dress', character.dress)} 
           style={styles.layer}
-          onError={(e) => console.log('❌ Erro socks')}
         />
         <Image 
-          source={getImageSource('hair', character.hair.type)} 
+          source={getCharacterImage('socks', character.socks)} 
           style={styles.layer}
-          onError={(e) => console.log('❌ Erro hair')}
         />
         <Image 
-          source={getImageSource('eyes', character.eyes)} 
+          source={getCharacterImage('hair', character.hair)} 
           style={styles.layer}
-          onError={(e) => console.log('❌ Erro eyes')}
+        />
+        <Image 
+          source={getCharacterImage('eyes', character.eyes)} 
+          style={styles.layer}
         />
       </View>
-
-      <Text style={styles.debugText}>
-        Container: 200x400px{'\n'}
-        Verifique o console para erros
-      </Text>
     </View>
   );
 };
@@ -82,16 +58,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#e9ecef',
     margin: 10,
-    padding: 20,
-  },
-  title: {
-    marginBottom: 10,
-    fontWeight: 'bold',
-    fontSize: 16,
+    padding: 10,
   },
   layerContainer: {
-    width: 300,  // 🔥 Aumentei de 200 para 300
-    height: 500, // 🔥 Aumentei de 400 para 500
+    width: 200,
+    height: 350,
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
@@ -102,29 +73,13 @@ const styles = StyleSheet.create({
   },
   layer: {
     position: 'absolute',
-    width: '120%',   // 🔥 Aumentei de 100% para 120%
-    height: '120%',  // 🔥 Aumentei de 100% para 120%
+    width: '150%',
+    height: '150%',
     resizeMode: 'contain'
   },
-  debugCenter: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  centerDot: {
-    width: 4,
-    height: 4,
-    backgroundColor: 'red',
-    borderRadius: 2
-  },
-  debugText: {
-    marginTop: 10,
-    fontSize: 12,
+  errorText: {
     color: '#666',
+    fontSize: 12,
     textAlign: 'center',
   },
 });

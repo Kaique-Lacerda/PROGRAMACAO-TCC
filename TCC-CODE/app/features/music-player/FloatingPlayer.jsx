@@ -30,6 +30,11 @@ const FloatingPlayer = ({
       onPress={onOpenMusicInterface}
       activeOpacity={0.9}
     >
+      {/* HITBOX VISÍVEL - ROXO */}
+      <View style={styles.hitboxOverlay}>
+        <Text style={styles.hitboxText}>🎵 Player Flutuante</Text>
+      </View>
+      
       <View style={styles.playerMiniContent}>
         {/* CD Girando */}
         <View style={[styles.cd, tocando && styles.cdGirando]}>
@@ -69,9 +74,10 @@ const FloatingPlayer = ({
 const styles = StyleSheet.create({
   playerMini: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
+    width: 200,
+    height: 260,
+    bottom: '5%',
+    left: '2%',
     backgroundColor: 'rgba(0,0,0,0.8)',
     borderRadius: 12,
     padding: 12,
@@ -79,9 +85,33 @@ const styles = StyleSheet.create({
     borderColor: '#ffb300',
     zIndex: 100,
   },
+  // HITBOX VISÍVEL - ROXO
+  hitboxOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderWidth: 3,
+    borderColor: '#ff00ff',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,0,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 101,
+  },
+  hitboxText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 12,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    padding: 4,
+    borderRadius: 4,
+  },
   playerMiniContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    zIndex: 102, // Na frente da hitbox
   },
   cd: {
     width: 40,
