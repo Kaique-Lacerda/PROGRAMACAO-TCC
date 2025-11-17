@@ -61,7 +61,7 @@ function Jogo() {
 
   // Função para obter o wallpaper (placeholder para futuras artes)
   const getCenarioSource = () => {
-    return require('../assets/images/wallpaper.png');
+    return require('../assets/images/wallpaper-jogo.png');
   };
 
   // === RENDERIZAÇÃO CONDICIONAL ===

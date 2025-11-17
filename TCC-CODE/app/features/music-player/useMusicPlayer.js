@@ -131,7 +131,6 @@ const salvarMusicasNoStorage = async () => {
       
       const mapeamentoAudios = {
         'local_all_night_long': require('../../../assets/audio/All_Night_Long.mp3'),
-        'local_eu_vou_te_comer_sorrindo': require('../../../assets/audio/Eu_Vou_Te_Comer_Sorrindo.mp3'),
         'local_k.o': require('../../../assets/audio/K.O.mp3'),
         'local_shut_up_and_listen': require('../../../assets/audio/Shut_Up_and_Listen.mp3'),
         'local_sol_loiro': require('../../../assets/audio/Sol_Loiro.mp3'),

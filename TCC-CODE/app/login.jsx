@@ -114,7 +114,7 @@ const handleSubmit = async () => {
   if (!fontsLoaded) {
     return (
       <ImageBackground
-        source={require('../assets/images/elementos.png')}
+        source={require('../assets/images/login-wallpaper.png')}
         resizeMode="cover"
         style={styles.background}
       >
@@ -128,7 +128,7 @@ const handleSubmit = async () => {
 
   return (
     <ImageBackground
-      source={require('../assets/images/elementos.png')}
+      source={require('../assets/images/login-wallpaper.png')}
       resizeMode="cover"
       style={styles.background}
     >
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Lobster-Regular',
     marginBottom: 40,
     textAlign: 'center',
-    color: '#ffb300',
+    color: '#ffffffff',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 5,

@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   playerMini: {
     position: 'absolute',
     width: 200,
-    height: 260,
+    height: 150,
     bottom: '5%',
     left: '2%',
     backgroundColor: 'rgba(0,0,0,0.8)',

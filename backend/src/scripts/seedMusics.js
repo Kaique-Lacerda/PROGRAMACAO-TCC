@@ -11,13 +11,6 @@ const sampleMusics = [
     category: "foco"
   },
   {
-    title: "Eu Vou Te Comer Sorrindo", 
-    artist: "Artista 2",
-    filePath: "Eu_Vou_Te_Comer_Sorrindo.mp3",
-    duration: 200,
-    category: "energia"
-  },
-  {
     title: "K.O.",
     artist: "Artista 3", 
     filePath: "K.O.mp3",

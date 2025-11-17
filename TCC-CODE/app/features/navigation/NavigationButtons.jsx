@@ -56,7 +56,10 @@ const NavigationButtons = ({ onOpenMusic }) => {
         activeOpacity={0.85}
         onPress={() => router.push('/cronometro')}
       >
-        <Text style={styles.debugText}>👤 Cronômetro</Text>
+        <Image 
+          source={require('../../../assets/images/veio.png')}
+          style={styles.personImage}
+        />
       </TouchableOpacity>
 
       {/* PERSONAGEM = BOTÃO FOCUS (VISÍVEL) */}
@@ -153,7 +156,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 320,
     left: '2%',
-    top: '26%',
+    top: '39%',
     borderWidth: 3,
     borderColor: '#0066ff',
     borderRadius: 8,
@@ -162,6 +165,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,102,255,0.2)',
     zIndex: 15,
     padding: 8,
+  },
+  personImage: {
+    width:300,
+    height: 300,
+    left: '-10%'
   },
   // PERSONAGEM = BOTÃO FOCUS - VERMELHO
   characterHitbox: {
